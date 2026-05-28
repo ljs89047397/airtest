@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.oom.item.OomCheckItemMapper">
+
+    <sql id="itemColumns">
+        i.oom_id,
+        i.item_no,
+        i.item_nm,
+        i.expctd_val,
+        i.rprtd_val,
+        i.dvtn_rate,
+        i.judg_cd,
+        i.rmrk,
+        i.use_bgng_dt,
+        i.use_end_dt,
+        i.frst_reg_dt,
+        i.frst_reg_user_id,
+        i.last_chg_dt,
+        i.last_chg_user_id
+    </sql>
+
+    <select id="selectByOomId"
+            resultType="kr.go.molit.icas.er.oom.item.domain.OomCheckItemVO">
+        SELECT <include refid="itemColumns"/>
+          FROM er.tn_oom_check_item i
+         WHERE i.oom_id = #{oomId}
+           AND NOW() BETWEEN i.use_bgng_dt AND i.use_end_dt
+         ORDER BY i.item_no ASC
+    </select>
+
+    <select id="selectOne"
+            resultType="kr.go.molit.icas.er.oom.item.domain.OomCheckItemVO">
+        SELECT <include refid="itemColumns"/>
+          FROM er.tn_oom_check_item i
+         WHERE i.oom_id  = #{oomId}
+           AND i.item_no = #{itemNo}
+           AND NOW() BETWEEN i.use_bgng_dt AND i.use_end_dt
+    </select>
+
+    <!-- 사용자 추가 항목 채번: startFrom(예: 100) 부터 max+1 -->
+    <select id="selectNextSn" resultType="int">
+        SELECT GREATEST(COALESCE(MAX(item_no), #{startFrom} - 1), #{startFrom} - 1) + 1
+          FROM er.tn_oom_check_item
+         WHERE oom_id = #{oomId}
+           AND item_no >= #{startFrom}
+    </select>
+
+    <insert id="insertItem"
+            parameterType="kr.go.molit.icas.er.oom.item.domain.OomCheckItemVO">
+        INSERT INTO er.tn_oom_check_item
+            (oom_id, item_no, item_nm,
+             expctd_val, rprtd_val, dvtn_rate, judg_cd, rmrk,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{oomId}, #{itemNo}, #{itemNm},
+             #{expctdVal}, #{rprtdVal}, #{dvtnRate}, #{judgCd}, #{rmrk},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="updateItem"
+            parameterType="kr.go.molit.icas.er.oom.item.domain.OomCheckItemVO">
+        UPDATE er.tn_oom_check_item
+           SET item_nm          = #{itemNm},
+               expctd_val       = #{expctdVal},
+               rprtd_val        = #{rprtdVal},
+               dvtn_rate        = #{dvtnRate},
+               judg_cd          = #{judgCd},
+               rmrk             = #{rmrk},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE oom_id  = #{oomId}
+           AND item_no = #{itemNo}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteOne">
+        UPDATE er.tn_oom_check_item
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE oom_id  = #{oomId}
+           AND item_no = #{itemNo}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- 1~18 자동 항목만 만료 (사용자 추가 100+ 는 유지) -->
+    <update id="softDeleteAutoItems">
+        UPDATE er.tn_oom_check_item
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE oom_id  = #{oomId}
+           AND item_no BETWEEN 1 AND 18
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <select id="countByJudg" resultType="int">
+        SELECT COUNT(*)
+          FROM er.tn_oom_check_item
+         WHERE oom_id  = #{oomId}
+           AND judg_cd = #{judgCd}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+</mapper>

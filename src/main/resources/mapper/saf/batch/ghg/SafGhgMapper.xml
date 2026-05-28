@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.saf.batch.ghg.SafGhgMapper">
+
+    <select id="selectByBatchId" resultType="kr.go.molit.icas.saf.batch.ghg.domain.SafGhgVO">
+        SELECT * FROM saf.tn_saf_ghg WHERE batch_id = #{batchId}
+    </select>
+
+    <insert id="insertGhg">
+        INSERT INTO saf.tn_saf_ghg (
+            batch_id, ghg_val_se_cd, core_lca_def_val, iluc_emsn, ttl_lca_def_val,
+            frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+        ) VALUES (
+            #{batchId}, #{ghgValSeCd}, #{coreLcaDefVal}, #{ilucEmsn}, #{ttlLcaDefVal},
+            NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId}
+        )
+    </insert>
+
+    <update id="updateGhg">
+        UPDATE saf.tn_saf_ghg
+        SET ghg_val_se_cd    = #{ghgValSeCd},
+            core_lca_def_val = #{coreLcaDefVal},
+            iluc_emsn        = #{ilucEmsn},
+            ttl_lca_def_val  = #{ttlLcaDefVal},
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{lastChgUserId}
+        WHERE batch_id = #{batchId}
+    </update>
+
+    <delete id="deleteByBatchId">
+        DELETE FROM saf.tn_saf_ghg WHERE batch_id = #{batchId}
+    </delete>
+
+</mapper>

@@ -1,0 +1,10 @@
+# Default: Windows CRLF
+* text=auto
+
+# Shell scripts must use LF (Docker/Linux)
+*.sh text eol=lf
+Dockerfile text eol=lf
+docker-entrypoint.sh text eol=lf
+
+# SQL files: LF
+*.sql text eol=lf

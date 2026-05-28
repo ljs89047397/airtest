@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.rprt.gap.ErDataGapMapper">
+
+    <!-- ════════════════════════════════════════════
+         공통 컬럼 목록
+         ════════════════════════════════════════════ -->
+    <sql id="gapColumns">
+        g.er_id,
+        g.gap_sn,
+        g.gap_dt,
+        g.ref_info,
+        g.gap_cause_cd,
+        g.gap_type_cd,
+        g.repl_mthd_desc,
+        g.afct_co2_emsn,
+        g.thrshld_5pct_xc_yn,
+        g.use_bgng_dt,
+        g.use_end_dt,
+        g.frst_reg_dt,
+        g.frst_reg_user_id,
+        g.last_chg_dt,
+        g.last_chg_user_id
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         목록 조회 (gap_sn ASC, 유효구간 필터)
+         ════════════════════════════════════════════ -->
+    <select id="selectByErId"
+            resultType="kr.go.molit.icas.er.rprt.gap.domain.ErDataGapVO">
+        SELECT <include refid="gapColumns"/>
+          FROM er.tn_er_data_gap g
+         WHERE g.er_id = #{erId}
+           AND NOW() BETWEEN g.use_bgng_dt AND g.use_end_dt
+         ORDER BY g.gap_sn ASC
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         단건 조회 (복합 PK)
+         ════════════════════════════════════════════ -->
+    <select id="selectOne"
+            resultType="kr.go.molit.icas.er.rprt.gap.domain.ErDataGapVO">
+        SELECT <include refid="gapColumns"/>
+          FROM er.tn_er_data_gap g
+         WHERE g.er_id  = #{erId}
+           AND g.gap_sn = #{gapSn}
+           AND NOW() BETWEEN g.use_bgng_dt AND g.use_end_dt
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         다음 gap_sn 채번: max(gap_sn) + 1, 없으면 1
+         ════════════════════════════════════════════ -->
+    <select id="selectNextSn" resultType="int">
+        SELECT COALESCE(MAX(gap_sn), 0) + 1
+          FROM er.tn_er_data_gap
+         WHERE er_id = #{erId}
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         신규 등록
+         thrshld_5pct_xc_yn 은 서비스 레이어에서 자동 설정
+         ════════════════════════════════════════════ -->
+    <insert id="insert"
+            parameterType="kr.go.molit.icas.er.rprt.gap.domain.ErDataGapVO">
+        INSERT INTO er.tn_er_data_gap
+            (er_id, gap_sn,
+             gap_dt, ref_info,
+             gap_cause_cd, gap_type_cd, repl_mthd_desc,
+             afct_co2_emsn, thrshld_5pct_xc_yn,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{erId}, #{gapSn},
+             #{gapDt}, #{refInfo},
+             #{gapCauseCd}, #{gapTypeCd}, #{replMthdDesc},
+             #{afctCo2Emsn}, #{thrshld5pctXcYn},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- ════════════════════════════════════════════
+         수정 (유효구간 필터 포함)
+         thrshld_5pct_xc_yn 은 서비스 레이어에서 자동 재설정
+         ════════════════════════════════════════════ -->
+    <update id="update"
+            parameterType="kr.go.molit.icas.er.rprt.gap.domain.ErDataGapVO">
+        UPDATE er.tn_er_data_gap
+           SET gap_dt              = #{gapDt},
+               ref_info            = #{refInfo},
+               gap_cause_cd        = #{gapCauseCd},
+               gap_type_cd         = #{gapTypeCd},
+               repl_mthd_desc      = #{replMthdDesc},
+               afct_co2_emsn       = #{afctCo2Emsn},
+               thrshld_5pct_xc_yn  = #{thrshld5pctXcYn},
+               last_chg_dt         = NOW(),
+               last_chg_user_id    = #{lastChgUserId}
+         WHERE er_id  = #{erId}
+           AND gap_sn = #{gapSn}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         소프트삭제: use_end_dt = NOW() - 1분
+         ════════════════════════════════════════════ -->
+    <update id="softDelete">
+        UPDATE er.tn_er_data_gap
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE er_id  = #{erId}
+           AND gap_sn = #{gapSn}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         신버전 복사: src → dst (INSERT ... SELECT)
+         ════════════════════════════════════════════ -->
+    <insert id="copyToNewEr">
+        INSERT INTO er.tn_er_data_gap
+            (er_id, gap_sn,
+             gap_dt, ref_info,
+             gap_cause_cd, gap_type_cd, repl_mthd_desc,
+             afct_co2_emsn, thrshld_5pct_xc_yn,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        SELECT #{dstErId}, gap_sn,
+               gap_dt, ref_info,
+               gap_cause_cd, gap_type_cd, repl_mthd_desc,
+               afct_co2_emsn, thrshld_5pct_xc_yn,
+               NOW(), '9999-12-31 23:59:59',
+               NOW(), #{userId},
+               NOW(), #{userId}
+          FROM er.tn_er_data_gap
+         WHERE er_id = #{srcErId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </insert>
+
+</mapper>

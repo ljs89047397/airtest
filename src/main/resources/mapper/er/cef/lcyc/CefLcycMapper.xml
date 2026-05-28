@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.cef.lcyc.CefLcycMapper">
+
+    <sql id="lcycColumns">
+        lc.cef_id,
+        lc.claim_no,
+        lc.lca_value_se_cd,
+        lc.core_lca_val,
+        lc.iluc_emsn,
+        lc.ttl_lca_val,
+        lc.sus_evid_file_id,
+        lc.use_bgng_dt,
+        lc.use_end_dt,
+        lc.frst_reg_dt,
+        lc.frst_reg_user_id,
+        lc.last_chg_dt,
+        lc.last_chg_user_id
+    </sql>
+
+    <select id="selectOne"
+            resultType="kr.go.molit.icas.er.cef.lcyc.domain.CefLcycVO">
+        SELECT <include refid="lcycColumns"/>
+          FROM er.tn_cef_lcyc lc
+         WHERE lc.cef_id   = #{cefId}
+           AND lc.claim_no = #{claimNo}
+           AND NOW() BETWEEN lc.use_bgng_dt AND lc.use_end_dt
+    </select>
+
+    <insert id="insertLcyc"
+            parameterType="kr.go.molit.icas.er.cef.lcyc.domain.CefLcycVO">
+        INSERT INTO er.tn_cef_lcyc
+            (cef_id, claim_no, lca_value_se_cd,
+             core_lca_val, iluc_emsn, ttl_lca_val, sus_evid_file_id,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{cefId}, #{claimNo}, #{lcaValueSeCd},
+             #{coreLcaVal}, #{ilucEmsn}, #{ttlLcaVal}, #{susEvidFileId},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="updateLcyc"
+            parameterType="kr.go.molit.icas.er.cef.lcyc.domain.CefLcycVO">
+        UPDATE er.tn_cef_lcyc
+           SET lca_value_se_cd  = #{lcaValueSeCd},
+               core_lca_val     = #{coreLcaVal},
+               iluc_emsn        = #{ilucEmsn},
+               ttl_lca_val      = #{ttlLcaVal},
+               sus_evid_file_id = #{susEvidFileId},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE cef_id   = #{cefId}
+           AND claim_no = #{claimNo}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteOne">
+        UPDATE er.tn_cef_lcyc
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE cef_id   = #{cefId}
+           AND claim_no = #{claimNo}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

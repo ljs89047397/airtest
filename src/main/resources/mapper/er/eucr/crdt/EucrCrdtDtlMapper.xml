@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.eucr.crdt.EucrCrdtDtlMapper">
+
+    <sql id="crdtColumns">
+        d.eucr_id,
+        d.crdt_no,
+        d.batch_no,
+        d.mthdlgy_id,
+        d.vntg_yr,
+        d.use_bgng_dt,
+        d.use_end_dt,
+        d.frst_reg_dt,
+        d.frst_reg_user_id,
+        d.last_chg_dt,
+        d.last_chg_user_id
+    </sql>
+
+    <select id="selectByEucrId"
+            resultType="kr.go.molit.icas.er.eucr.crdt.domain.EucrCrdtDtlVO">
+        SELECT <include refid="crdtColumns"/>
+          FROM er.tn_eucr_crdt_dtl d
+         WHERE d.eucr_id = #{eucrId}
+           AND NOW() BETWEEN d.use_bgng_dt AND d.use_end_dt
+         ORDER BY d.batch_no, d.crdt_no
+    </select>
+
+    <select id="selectByBatch"
+            resultType="kr.go.molit.icas.er.eucr.crdt.domain.EucrCrdtDtlVO">
+        SELECT <include refid="crdtColumns"/>
+          FROM er.tn_eucr_crdt_dtl d
+         WHERE d.eucr_id  = #{eucrId}
+           AND d.batch_no = #{batchNo}
+           AND NOW() BETWEEN d.use_bgng_dt AND d.use_end_dt
+         ORDER BY d.crdt_no
+    </select>
+
+    <select id="selectOne"
+            resultType="kr.go.molit.icas.er.eucr.crdt.domain.EucrCrdtDtlVO">
+        SELECT <include refid="crdtColumns"/>
+          FROM er.tn_eucr_crdt_dtl d
+         WHERE d.eucr_id = #{eucrId}
+           AND d.crdt_no = #{crdtNo}
+           AND NOW() BETWEEN d.use_bgng_dt AND d.use_end_dt
+    </select>
+
+    <insert id="insertCrdt"
+            parameterType="kr.go.molit.icas.er.eucr.crdt.domain.EucrCrdtDtlVO">
+        INSERT INTO er.tn_eucr_crdt_dtl
+            (eucr_id, crdt_no, batch_no, mthdlgy_id, vntg_yr,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{eucrId}, #{crdtNo}, #{batchNo}, #{mthdlgyId}, #{vntgYr},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="softDeleteOne">
+        UPDATE er.tn_eucr_crdt_dtl
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE eucr_id = #{eucrId}
+           AND crdt_no = #{crdtNo}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- 이중사용 교차 스캔: 입력 crdt_no 들 중 자기 EUCR 제외하고 점유된 행 반환 -->
+    <select id="findConflicts"
+            resultType="kr.go.molit.icas.er.eucr.validate.domain.CrdtConflictRow">
+        <choose>
+            <when test="crdtNos == null or crdtNos.size() == 0">
+                SELECT NULL::varchar AS crdt_no, NULL::varchar AS eucr_id,
+                       NULL::varchar AS batch_no, NULL::varchar AS oprtr_id,
+                       NULL::varchar AS oprtr_nm, NULL::char AS rprt_yr
+                 WHERE 1 = 0
+            </when>
+            <otherwise>
+                SELECT d.crdt_no       AS crdt_no,
+                       d.eucr_id       AS eucr_id,
+                       d.batch_no      AS batch_no,
+                       e.oprtr_id      AS oprtr_id,
+                       o.oprtr_nm      AS oprtr_nm,
+                       e.rprt_yr       AS rprt_yr
+                  FROM er.tn_eucr_crdt_dtl d
+                  JOIN er.tn_eucr        e ON e.eucr_id  = d.eucr_id
+                                           AND NOW() BETWEEN e.use_bgng_dt AND e.use_end_dt
+                  JOIN com.tn_oprtr      o ON o.oprtr_id = e.oprtr_id
+                                           AND NOW() BETWEEN o.use_bgng_dt AND o.use_end_dt
+                 WHERE NOW() BETWEEN d.use_bgng_dt AND d.use_end_dt
+                   AND d.crdt_no IN
+                       <foreach collection="crdtNos" item="cn" open="(" separator="," close=")">
+                           #{cn}
+                       </foreach>
+                   <if test="excludeEucrId != null and excludeEucrId != ''">
+                       AND d.eucr_id != #{excludeEucrId}
+                   </if>
+                 ORDER BY d.eucr_id, d.crdt_no
+            </otherwise>
+        </choose>
+    </select>
+
+</mapper>

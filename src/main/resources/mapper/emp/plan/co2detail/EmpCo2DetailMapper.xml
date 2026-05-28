@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.emp.plan.co2detail.EmpCo2DetailMapper">
+
+    <!-- ════════════════════════════════════════════
+         공통 컬럼 목록
+         ════════════════════════════════════════════ -->
+    <sql id="detailColumns">
+        d.emp_plan_id,
+        d.mntr_mthd_cd,
+        d.msr_tming_desc,
+        d.msr_device_desc,
+        d.msr_proc_desc,
+        d.fuel_dnsty_desc,
+        d.use_bgng_dt,
+        d.use_end_dt,
+        d.frst_reg_dt,
+        d.frst_reg_user_id,
+        d.last_chg_dt,
+        d.last_chg_user_id
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         목록 조회 (mntr_mthd_cd ASC, 유효구간 필터)
+         ════════════════════════════════════════════ -->
+    <select id="selectByPlanId"
+            resultType="kr.go.molit.icas.emp.plan.co2detail.domain.EmpCo2DetailVO">
+        SELECT <include refid="detailColumns"/>
+          FROM emp.tn_emp_co2_detail d
+         WHERE d.emp_plan_id = #{empPlanId}
+           AND NOW() BETWEEN d.use_bgng_dt AND d.use_end_dt
+         ORDER BY d.mntr_mthd_cd ASC
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         단건 조회 (복합 PK)
+         ════════════════════════════════════════════ -->
+    <select id="selectOne"
+            resultType="kr.go.molit.icas.emp.plan.co2detail.domain.EmpCo2DetailVO">
+        SELECT <include refid="detailColumns"/>
+          FROM emp.tn_emp_co2_detail d
+         WHERE d.emp_plan_id  = #{empPlanId}
+           AND d.mntr_mthd_cd = #{mntrMthdCd}
+           AND NOW() BETWEEN d.use_bgng_dt AND d.use_end_dt
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         방법 코드 중복 체크 (유효구간 내)
+         ════════════════════════════════════════════ -->
+    <select id="existsByMethod" resultType="int">
+        SELECT COUNT(*)
+          FROM emp.tn_emp_co2_detail
+         WHERE emp_plan_id  = #{empPlanId}
+           AND mntr_mthd_cd = #{mntrMthdCd}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         신규 등록
+         ════════════════════════════════════════════ -->
+    <insert id="insertEmpCo2Detail"
+            parameterType="kr.go.molit.icas.emp.plan.co2detail.domain.EmpCo2DetailVO">
+        INSERT INTO emp.tn_emp_co2_detail
+            (emp_plan_id, mntr_mthd_cd,
+             msr_tming_desc, msr_device_desc, msr_proc_desc, fuel_dnsty_desc,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{empPlanId}, #{mntrMthdCd},
+             #{msrTmingDesc}, #{msrDeviceDesc}, #{msrProcDesc}, #{fuelDnstyDesc},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- ════════════════════════════════════════════
+         수정 (유효구간 필터 포함)
+         ════════════════════════════════════════════ -->
+    <update id="updateEmpCo2Detail"
+            parameterType="kr.go.molit.icas.emp.plan.co2detail.domain.EmpCo2DetailVO">
+        UPDATE emp.tn_emp_co2_detail
+           SET msr_tming_desc  = #{msrTmingDesc},
+               msr_device_desc = #{msrDeviceDesc},
+               msr_proc_desc   = #{msrProcDesc},
+               fuel_dnsty_desc = #{fuelDnstyDesc},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE emp_plan_id  = #{empPlanId}
+           AND mntr_mthd_cd = #{mntrMthdCd}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         소프트삭제: use_end_dt = NOW() - 1분
+         ════════════════════════════════════════════ -->
+    <update id="softDeleteOne">
+        UPDATE emp.tn_emp_co2_detail
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE emp_plan_id  = #{empPlanId}
+           AND mntr_mthd_cd = #{mntrMthdCd}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         신버전 복사: src → dst (INSERT ... SELECT)
+         ════════════════════════════════════════════ -->
+    <insert id="copyToNewPlan">
+        INSERT INTO emp.tn_emp_co2_detail
+            (emp_plan_id, mntr_mthd_cd,
+             msr_tming_desc, msr_device_desc, msr_proc_desc, fuel_dnsty_desc,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        SELECT #{dstEmpPlanId}, mntr_mthd_cd,
+               msr_tming_desc, msr_device_desc, msr_proc_desc, fuel_dnsty_desc,
+               NOW(), '9999-12-31 23:59:59',
+               NOW(), #{userId},
+               NOW(), #{userId}
+          FROM emp.tn_emp_co2_detail
+         WHERE emp_plan_id = #{srcEmpPlanId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </insert>
+
+</mapper>

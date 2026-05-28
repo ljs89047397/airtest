@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.rprt.ErMapper">
+
+    <!-- ════════════════════════════════════════════
+         공통 컬럼 목록
+         ════════════════════════════════════════════ -->
+    <sql id="erColumns">
+        e.er_id,
+        e.oprtr_id,
+        o.oprtr_nm,
+        e.rprt_yr,
+        e.er_ver,
+        e.er_st_cd,
+        e.rprt_prd_end_dt,
+        e.isue_dt,
+        e.emp_plan_id_apld,
+        e.emp_ver_apld,
+        e.emp_aprv_dt,
+        e.emp_eff_dt,
+        e.emp_updt_dt,
+        e.cert_use_yn,
+        e.allc_use_yn,
+        e.sbmt_dt,
+        e.aprv_dt,
+        e.aprv_user_id,
+        e.rjct_dt,
+        e.rjct_rsn,
+        e.use_bgng_dt,
+        e.use_end_dt,
+        e.frst_reg_dt,
+        e.frst_reg_user_id,
+        e.last_chg_dt,
+        e.last_chg_user_id
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         공통 FROM + JOIN (유효구간 양쪽 필터)
+         ════════════════════════════════════════════ -->
+    <sql id="erFromJoin">
+        FROM er.tn_er e
+        JOIN com.tn_oprtr o ON o.oprtr_id = e.oprtr_id
+                            AND NOW() BETWEEN o.use_bgng_dt AND o.use_end_dt
+       WHERE NOW() BETWEEN e.use_bgng_dt AND e.use_end_dt
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         동적 검색 조건
+         ════════════════════════════════════════════ -->
+    <sql id="erSearchConditions">
+        <if test="oprtrId != null and oprtrId != ''">
+            AND e.oprtr_id = #{oprtrId}
+        </if>
+        <if test="rprtYr != null and rprtYr != ''">
+            AND e.rprt_yr = #{rprtYr}
+        </if>
+        <if test="erStCd != null and erStCd != ''">
+            AND e.er_st_cd = #{erStCd}
+        </if>
+        <!-- VERIFIER 가시범위: vrfcn_assgn 배정 운영사만 -->
+        <if test="verifierScope == true">
+            AND EXISTS (
+                SELECT 1
+                  FROM com.tn_vrfcn_assgn va
+                 WHERE va.vrfcn_inst_id = #{vrfcnInstId}
+                   AND va.oprtr_id      = e.oprtr_id
+                   AND va.rprt_yr       = e.rprt_yr
+                   AND NOW() BETWEEN va.use_bgng_dt AND va.use_end_dt
+            )
+        </if>
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         목록 조회 (검색 + 페이징)
+         ════════════════════════════════════════════ -->
+    <select id="selectErs"
+            parameterType="kr.go.molit.icas.er.rprt.domain.ErSearch"
+            resultType="kr.go.molit.icas.er.rprt.domain.ErVO">
+        SELECT <include refid="erColumns"/>
+        <include refid="erFromJoin"/>
+        <include refid="erSearchConditions"/>
+         ORDER BY e.rprt_yr DESC, e.er_ver DESC, e.frst_reg_dt DESC
+         LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <!-- 총 건수 (페이징용) -->
+    <select id="countErs"
+            parameterType="kr.go.molit.icas.er.rprt.domain.ErSearch"
+            resultType="long">
+        SELECT COUNT(*)
+        <include refid="erFromJoin"/>
+        <include refid="erSearchConditions"/>
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         단건 조회
+         ════════════════════════════════════════════ -->
+    <select id="selectByErId"
+            resultType="kr.go.molit.icas.er.rprt.domain.ErVO">
+        SELECT <include refid="erColumns"/>
+        <include refid="erFromJoin"/>
+           AND e.er_id = #{erId}
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         er_id 채번: ER prefix 최대 순번
+         ════════════════════════════════════════════ -->
+    <select id="countByPrefix" resultType="int">
+        SELECT COALESCE(
+                   MAX(CAST(SUBSTRING(er_id, LENGTH(#{prefix}) + 1) AS INTEGER)),
+                   0
+               )
+          FROM er.tn_er
+         WHERE er_id LIKE #{prefix} || '%'
+           AND SUBSTRING(er_id, LENGTH(#{prefix}) + 1) ~ '^[0-9]+$'
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         같은 (oprtr_id, rprt_yr) 의 최대 er_ver
+         NULL 이면 등록 이력 없음
+         ════════════════════════════════════════════ -->
+    <select id="selectMaxErVer" resultType="String">
+        SELECT MAX(CAST(SPLIT_PART(er_ver, '.', 1) AS INTEGER)) || '.0'
+          FROM er.tn_er
+         WHERE oprtr_id = #{oprtrId}
+           AND rprt_yr  = #{rprtYr}
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         DRAFT 신규 등록
+         ════════════════════════════════════════════ -->
+    <insert id="insertEr"
+            parameterType="kr.go.molit.icas.er.rprt.domain.ErVO">
+        INSERT INTO er.tn_er
+            (er_id, oprtr_id, rprt_yr, er_ver, er_st_cd,
+             rprt_prd_end_dt, isue_dt,
+             emp_plan_id_apld, emp_ver_apld, emp_aprv_dt, emp_eff_dt, emp_updt_dt,
+             cert_use_yn, allc_use_yn,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{erId}, #{oprtrId}, #{rprtYr}, #{erVer}, 'DRAFT',
+             #{rprtPrdEndDt}, #{isueDt},
+             #{empPlanIdApld}, #{empVerApld}, #{empAprvDt}, #{empEffDt}, #{empUpdtDt},
+             COALESCE(#{certUseYn}, 'N'), COALESCE(#{allcUseYn}, 'N'),
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- ════════════════════════════════════════════
+         DRAFT 마스터 수정 (상태 DRAFT 조건 포함)
+         ════════════════════════════════════════════ -->
+    <update id="updateEr"
+            parameterType="kr.go.molit.icas.er.rprt.domain.ErVO">
+        UPDATE er.tn_er
+           SET rprt_prd_end_dt   = #{rprtPrdEndDt},
+               isue_dt           = #{isueDt},
+               emp_plan_id_apld  = #{empPlanIdApld},
+               emp_ver_apld      = #{empVerApld},
+               emp_aprv_dt       = #{empAprvDt},
+               emp_eff_dt        = #{empEffDt},
+               emp_updt_dt       = #{empUpdtDt},
+               cert_use_yn       = #{certUseYn},
+               allc_use_yn       = #{allcUseYn},
+               last_chg_dt       = NOW(),
+               last_chg_user_id  = #{lastChgUserId}
+         WHERE er_id    = #{erId}
+           AND er_st_cd = 'DRAFT'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         소프트삭제 (DRAFT 한정)
+         ════════════════════════════════════════════ -->
+    <update id="softDeleteEr">
+        UPDATE er.tn_er
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE er_id    = #{erId}
+           AND er_st_cd = 'DRAFT'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         제출: DRAFT → SBMTD
+         ════════════════════════════════════════════ -->
+    <update id="updateSubmit">
+        UPDATE er.tn_er
+           SET er_st_cd         = 'SBMTD',
+               sbmt_dt          = NOW(),
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE er_id    = #{erId}
+           AND er_st_cd = 'DRAFT'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         상태 코드만 변경 (review: SBMTD→RVWNG / recommend: RVWNG→RCMDD)
+         ════════════════════════════════════════════ -->
+    <update id="updateErStCd">
+        UPDATE er.tn_er
+           SET er_st_cd         = #{newSt},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE er_id = #{erId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         반려: RVWNG → DRAFT (사유 기록)
+         ════════════════════════════════════════════ -->
+    <update id="updateReject">
+        UPDATE er.tn_er
+           SET er_st_cd         = 'DRAFT',
+               rjct_dt          = NOW(),
+               rjct_rsn         = #{reason},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE er_id    = #{erId}
+           AND er_st_cd = 'RVWNG'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         승인: RVWNG 또는 RCMDD → APRVD
+         ════════════════════════════════════════════ -->
+    <update id="updateApprove">
+        UPDATE er.tn_er
+           SET er_st_cd         = 'APRVD',
+               aprv_dt          = NOW(),
+               aprv_user_id     = #{userId},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE er_id    = #{erId}
+           AND er_st_cd IN ('RVWNG', 'RCMDD')
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         취소: APRVD → CNCLD (사유 기록)
+         ════════════════════════════════════════════ -->
+    <update id="updateCancel">
+        UPDATE er.tn_er
+           SET er_st_cd         = 'CNCLD',
+               rjct_rsn         = #{reason},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE er_id    = #{erId}
+           AND er_st_cd = 'APRVD'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

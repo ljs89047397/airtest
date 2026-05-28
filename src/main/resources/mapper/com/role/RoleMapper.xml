@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.com.role.RoleMapper">
+
+    <select id="selectRoles" resultType="kr.go.molit.icas.com.role.domain.RoleVO">
+        SELECT role_id,
+               role_nm,
+               ognz_se_cd_allowed,
+               role_desc,
+               use_bgng_dt,
+               use_end_dt,
+               frst_reg_dt,
+               frst_reg_user_id,
+               last_chg_dt,
+               last_chg_user_id
+          FROM com.tn_role
+         WHERE NOW() BETWEEN use_bgng_dt AND use_end_dt
+         ORDER BY role_id
+    </select>
+
+    <select id="selectRole" resultType="kr.go.molit.icas.com.role.domain.RoleVO">
+        SELECT role_id,
+               role_nm,
+               ognz_se_cd_allowed,
+               role_desc,
+               use_bgng_dt,
+               use_end_dt,
+               frst_reg_dt,
+               frst_reg_user_id,
+               last_chg_dt,
+               last_chg_user_id
+          FROM com.tn_role
+         WHERE role_id = #{roleId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- 유효·만료 포함 전체에서 중복 체크 -->
+    <select id="existsRoleId" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1
+              FROM com.tn_role
+             WHERE role_id = #{roleId}
+        )
+    </select>
+
+    <insert id="insertRole" parameterType="kr.go.molit.icas.com.role.domain.RoleVO">
+        INSERT INTO com.tn_role
+            (role_id, role_nm, ognz_se_cd_allowed, role_desc,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{roleId}, #{roleNm}, #{ognzSeCdAllowed}, #{roleDesc},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="updateRole" parameterType="kr.go.molit.icas.com.role.domain.RoleVO">
+        UPDATE com.tn_role
+           SET role_nm             = #{roleNm},
+               ognz_se_cd_allowed  = #{ognzSeCdAllowed},
+               role_desc           = #{roleDesc},
+               last_chg_dt         = NOW(),
+               last_chg_user_id    = #{lastChgUserId}
+         WHERE role_id = #{roleId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteRole">
+        UPDATE com.tn_role
+           SET use_end_dt      = NOW() - INTERVAL '1 minute',
+               last_chg_dt     = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE role_id = #{roleId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

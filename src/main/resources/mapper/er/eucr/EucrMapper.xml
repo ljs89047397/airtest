@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.eucr.EucrMapper">
+
+    <sql id="eucrColumns">
+        e.eucr_id,
+        e.oprtr_id,
+        o.oprtr_nm,
+        e.rprt_yr,
+        e.eucr_ver,
+        e.eucr_st_cd,
+        e.ttl_qty,
+        e.ofst_req_qty,
+        e.fulfilled_yn,
+        e.sbmt_dt,
+        e.aprv_dt,
+        e.use_bgng_dt,
+        e.use_end_dt,
+        e.frst_reg_dt,
+        e.frst_reg_user_id,
+        e.last_chg_dt,
+        e.last_chg_user_id
+    </sql>
+
+    <sql id="eucrFromJoin">
+        FROM er.tn_eucr e
+        JOIN com.tn_oprtr o ON o.oprtr_id = e.oprtr_id
+                            AND NOW() BETWEEN o.use_bgng_dt AND o.use_end_dt
+       WHERE NOW() BETWEEN e.use_bgng_dt AND e.use_end_dt
+    </sql>
+
+    <sql id="eucrSearchConditions">
+        <if test="oprtrId != null and oprtrId != ''">      AND e.oprtr_id      = #{oprtrId}     </if>
+        <if test="rprtYr != null and rprtYr != ''">        AND e.rprt_yr       = #{rprtYr}      </if>
+        <if test="eucrStCd != null and eucrStCd != ''">    AND e.eucr_st_cd    = #{eucrStCd}    </if>
+        <if test="fulfilledYn != null and fulfilledYn != ''">AND e.fulfilled_yn = #{fulfilledYn}</if>
+        <if test="verifierScope == true">
+            AND EXISTS (
+                SELECT 1
+                  FROM com.tn_vrfcn_assgn va
+                 WHERE va.vrfcn_inst_id = #{vrfcnInstId}
+                   AND va.oprtr_id      = e.oprtr_id
+                   AND va.rprt_yr       = e.rprt_yr
+                   AND NOW() BETWEEN va.use_bgng_dt AND va.use_end_dt
+            )
+        </if>
+    </sql>
+
+    <select id="selectEucrs"
+            parameterType="kr.go.molit.icas.er.eucr.domain.EucrSearch"
+            resultType="kr.go.molit.icas.er.eucr.domain.EucrVO">
+        SELECT <include refid="eucrColumns"/>
+        <include refid="eucrFromJoin"/>
+        <include refid="eucrSearchConditions"/>
+         ORDER BY e.rprt_yr DESC, e.eucr_ver DESC, e.frst_reg_dt DESC
+         LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countEucrs"
+            parameterType="kr.go.molit.icas.er.eucr.domain.EucrSearch"
+            resultType="long">
+        SELECT COUNT(*)
+        <include refid="eucrFromJoin"/>
+        <include refid="eucrSearchConditions"/>
+    </select>
+
+    <select id="selectByEucrId" resultType="kr.go.molit.icas.er.eucr.domain.EucrVO">
+        SELECT <include refid="eucrColumns"/>
+        <include refid="eucrFromJoin"/>
+           AND e.eucr_id = #{eucrId}
+    </select>
+
+    <select id="countByPrefix" resultType="int">
+        SELECT COALESCE(
+                   MAX(CAST(SUBSTRING(eucr_id, LENGTH(#{prefix}) + 1) AS INTEGER)),
+                   0
+               )
+          FROM er.tn_eucr
+         WHERE eucr_id LIKE #{prefix} || '%'
+           AND SUBSTRING(eucr_id, LENGTH(#{prefix}) + 1) ~ '^[0-9]+$'
+    </select>
+
+    <select id="selectMaxEucrVer" resultType="String">
+        SELECT MAX(CAST(SPLIT_PART(eucr_ver, '.', 1) AS INTEGER)) || '.0'
+          FROM er.tn_eucr
+         WHERE oprtr_id = #{oprtrId}
+           AND rprt_yr  = #{rprtYr}
+    </select>
+
+    <insert id="insertEucr" parameterType="kr.go.molit.icas.er.eucr.domain.EucrVO">
+        INSERT INTO er.tn_eucr
+            (eucr_id, oprtr_id, rprt_yr, eucr_ver, eucr_st_cd,
+             ttl_qty, ofst_req_qty, fulfilled_yn,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{eucrId}, #{oprtrId}, #{rprtYr}, #{eucrVer}, 'DRAFT',
+             0, COALESCE(#{ofstReqQty}, 0), 'N',
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="updateOfstReqQty">
+        UPDATE er.tn_eucr
+           SET ofst_req_qty    = #{ofstReqQty},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE eucr_id    = #{eucrId}
+           AND eucr_st_cd = 'DRAFT'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteEucr">
+        UPDATE er.tn_eucr
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE eucr_id    = #{eucrId}
+           AND eucr_st_cd = 'DRAFT'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- 합계 재계산 -->
+    <select id="sumBatchQty" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(sub_qty), 0)
+          FROM er.tn_eucr_batch
+         WHERE eucr_id = #{eucrId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <update id="updateTtlQtyAndFulfilled">
+        UPDATE er.tn_eucr
+           SET ttl_qty          = #{ttlQty},
+               fulfilled_yn     = #{fulfilledYn},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE eucr_id = #{eucrId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- 상태 전이 -->
+    <update id="updateSubmit">
+        UPDATE er.tn_eucr
+           SET eucr_st_cd       = 'SBMTD',
+               sbmt_dt          = NOW(),
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE eucr_id    = #{eucrId}
+           AND eucr_st_cd = 'DRAFT'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="updateEucrStCd">
+        UPDATE er.tn_eucr
+           SET eucr_st_cd       = #{newSt},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE eucr_id = #{eucrId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="updateApprove">
+        UPDATE er.tn_eucr
+           SET eucr_st_cd       = 'APRVD',
+               aprv_dt          = NOW(),
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE eucr_id    = #{eucrId}
+           AND eucr_st_cd IN ('RVWNG', 'RCMDD')
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="updateCancel">
+        UPDATE er.tn_eucr
+           SET eucr_st_cd       = 'CNCLD',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE eucr_id    = #{eucrId}
+           AND eucr_st_cd = 'APRVD'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

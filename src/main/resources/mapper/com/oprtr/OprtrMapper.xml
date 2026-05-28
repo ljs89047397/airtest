@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.com.oprtr.OprtrMapper">
+
+    <!-- 전체 목록 (유효구간 내) -->
+    <select id="selectAll" resultType="kr.go.molit.icas.com.oprtr.domain.OprtrVO">
+        SELECT oprtr_id, ognz_id, icao_desig, oprtr_nm, oprtr_nm_en,
+               aoc_no, aoc_isue_dt, aoc_xpr_dt, aoc_athrty_nm,
+               parent_co_nm, lglrpr_nm, lglrpr_cnct, addr,
+               use_bgng_dt, use_end_dt, frst_reg_dt, frst_reg_user_id,
+               last_chg_dt, last_chg_user_id
+          FROM com.tn_oprtr
+         WHERE NOW() BETWEEN use_bgng_dt AND use_end_dt
+         ORDER BY oprtr_id
+    </select>
+
+    <!-- 단건 조회 -->
+    <select id="selectByOprtrId" resultType="kr.go.molit.icas.com.oprtr.domain.OprtrVO">
+        SELECT oprtr_id, ognz_id, icao_desig, oprtr_nm, oprtr_nm_en,
+               aoc_no, aoc_isue_dt, aoc_xpr_dt, aoc_athrty_nm,
+               parent_co_nm, lglrpr_nm, lglrpr_cnct, addr,
+               use_bgng_dt, use_end_dt, frst_reg_dt, frst_reg_user_id,
+               last_chg_dt, last_chg_user_id
+          FROM com.tn_oprtr
+         WHERE oprtr_id = #{oprtrId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!--
+        VERIFIER 가시범위: vrfcn_assgn 에 배정된 운영사만 노출.
+        ognzSeCd = 'AIRLINE' 이면 본인 oprtrId 만, 'VERIFIER' 이면 배정 목록.
+        selectAccessibleForUser: Controller 에서 VERIFIER 분기 시 호출.
+    -->
+    <select id="selectAccessibleForUser" resultType="kr.go.molit.icas.com.oprtr.domain.OprtrVO">
+        SELECT o.oprtr_id, o.ognz_id, o.icao_desig, o.oprtr_nm, o.oprtr_nm_en,
+               o.aoc_no, o.aoc_isue_dt, o.aoc_xpr_dt, o.aoc_athrty_nm,
+               o.parent_co_nm, o.lglrpr_nm, o.lglrpr_cnct, o.addr,
+               o.use_bgng_dt, o.use_end_dt, o.frst_reg_dt, o.frst_reg_user_id,
+               o.last_chg_dt, o.last_chg_user_id
+          FROM com.tn_oprtr o
+         WHERE NOW() BETWEEN o.use_bgng_dt AND o.use_end_dt
+           <if test="ognzSeCd == 'AIRLINE'">
+             AND o.oprtr_id = #{oprtrId}
+           </if>
+           <if test="ognzSeCd == 'VERIFIER'">
+             AND EXISTS (
+                 SELECT 1
+                   FROM com.tn_vrfcn_assgn va
+                  WHERE va.vrfcn_inst_id = #{vrfcnInstId}
+                    AND va.oprtr_id      = o.oprtr_id
+                    AND va.rprt_yr       = #{rprtYr}
+                    AND NOW() BETWEEN va.use_bgng_dt AND va.use_end_dt
+             )
+           </if>
+         ORDER BY o.oprtr_id
+    </select>
+
+    <!-- ICAO 지정어 중복 여부 (등록 전 사전 체크) -->
+    <select id="countByIcaoDesig" resultType="int">
+        SELECT COUNT(*)
+          FROM com.tn_oprtr
+         WHERE icao_desig = #{icaoDesig}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- ICAO 지정어 중복 여부 (수정 시 본인 제외) -->
+    <select id="countByIcaoDesigExclude" resultType="int">
+        SELECT COUNT(*)
+          FROM com.tn_oprtr
+         WHERE icao_desig = #{icaoDesig}
+           AND oprtr_id  != #{oprtrId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- ID 채번: prefix + 4자리 순번. prefix 파라미터 일반화 (VrfcnInstMapper 와 동일 패턴) -->
+    <select id="countByPrefix" resultType="int">
+        SELECT COALESCE(
+                   MAX(CAST(SUBSTRING(oprtr_id, LENGTH(#{prefix}) + 1) AS INTEGER)),
+                   0
+               )
+          FROM com.tn_oprtr
+         WHERE oprtr_id LIKE #{prefix} || '%'
+           AND SUBSTRING(oprtr_id, LENGTH(#{prefix}) + 1) ~ '^[0-9]+$'
+    </select>
+
+    <!-- 등록 -->
+    <insert id="insert" parameterType="kr.go.molit.icas.com.oprtr.domain.OprtrVO">
+        INSERT INTO com.tn_oprtr
+            (oprtr_id, ognz_id, icao_desig, oprtr_nm, oprtr_nm_en,
+             aoc_no, aoc_isue_dt, aoc_xpr_dt, aoc_athrty_nm,
+             parent_co_nm, lglrpr_nm, lglrpr_cnct, addr,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{oprtrId}, #{ognzId}, #{icaoDesig}, #{oprtrNm}, #{oprtrNmEn},
+             #{aocNo}, #{aocIsueDt}, #{aocXprDt}, #{aocAthrtyNm},
+             #{parentCoNm}, #{lglrprNm}, #{lglrprCnct}, #{addr},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- 수정 (유효구간 내 행만) -->
+    <update id="update" parameterType="kr.go.molit.icas.com.oprtr.domain.OprtrVO">
+        UPDATE com.tn_oprtr
+           SET ognz_id          = #{ognzId},
+               icao_desig       = #{icaoDesig},
+               oprtr_nm         = #{oprtrNm},
+               oprtr_nm_en      = #{oprtrNmEn},
+               aoc_no           = #{aocNo},
+               aoc_isue_dt      = #{aocIsueDt},
+               aoc_xpr_dt       = #{aocXprDt},
+               aoc_athrty_nm    = #{aocAthrtyNm},
+               parent_co_nm     = #{parentCoNm},
+               lglrpr_nm        = #{lglrprNm},
+               lglrpr_cnct      = #{lglrprCnct},
+               addr             = #{addr},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE oprtr_id = #{oprtrId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- 소프트삭제: use_end_dt = NOW() - 1분 -->
+    <update id="softDelete">
+        UPDATE com.tn_oprtr
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE oprtr_id = #{oprtrId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

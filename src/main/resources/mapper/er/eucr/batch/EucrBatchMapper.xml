@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.eucr.batch.EucrBatchMapper">
+
+    <sql id="batchColumns">
+        b.eucr_id,
+        b.batch_no,
+        b.crdt_type_cd,
+        b.sub_qty,
+        b.prgrm_nm,
+        b.vntg_yr,
+        b.mthdlgy_id,
+        b.crdt_no_from,
+        b.crdt_no_to,
+        b.cncl_dt,
+        b.use_bgng_dt,
+        b.use_end_dt,
+        b.frst_reg_dt,
+        b.frst_reg_user_id,
+        b.last_chg_dt,
+        b.last_chg_user_id
+    </sql>
+
+    <select id="selectByEucrId"
+            resultType="kr.go.molit.icas.er.eucr.batch.domain.EucrBatchVO">
+        SELECT <include refid="batchColumns"/>
+          FROM er.tn_eucr_batch b
+         WHERE b.eucr_id = #{eucrId}
+           AND NOW() BETWEEN b.use_bgng_dt AND b.use_end_dt
+         ORDER BY b.batch_no ASC
+    </select>
+
+    <select id="selectOne"
+            resultType="kr.go.molit.icas.er.eucr.batch.domain.EucrBatchVO">
+        SELECT <include refid="batchColumns"/>
+          FROM er.tn_eucr_batch b
+         WHERE b.eucr_id  = #{eucrId}
+           AND b.batch_no = #{batchNo}
+           AND NOW() BETWEEN b.use_bgng_dt AND b.use_end_dt
+    </select>
+
+    <select id="existsBatchNo" resultType="boolean">
+        SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
+          FROM er.tn_eucr_batch
+         WHERE eucr_id  = #{eucrId}
+           AND batch_no = #{batchNo}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <insert id="insertBatch"
+            parameterType="kr.go.molit.icas.er.eucr.batch.domain.EucrBatchVO">
+        INSERT INTO er.tn_eucr_batch
+            (eucr_id, batch_no, crdt_type_cd, sub_qty,
+             prgrm_nm, vntg_yr, mthdlgy_id,
+             crdt_no_from, crdt_no_to, cncl_dt,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{eucrId}, #{batchNo}, #{crdtTypeCd}, #{subQty},
+             #{prgrmNm}, #{vntgYr}, #{mthdlgyId},
+             #{crdtNoFrom}, #{crdtNoTo}, #{cnclDt},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="updateBatch"
+            parameterType="kr.go.molit.icas.er.eucr.batch.domain.EucrBatchVO">
+        UPDATE er.tn_eucr_batch
+           SET crdt_type_cd     = #{crdtTypeCd},
+               sub_qty          = #{subQty},
+               prgrm_nm         = #{prgrmNm},
+               vntg_yr          = #{vntgYr},
+               mthdlgy_id       = #{mthdlgyId},
+               crdt_no_from     = #{crdtNoFrom},
+               crdt_no_to       = #{crdtNoTo},
+               cncl_dt          = #{cnclDt},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE eucr_id  = #{eucrId}
+           AND batch_no = #{batchNo}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteOne">
+        UPDATE er.tn_eucr_batch
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE eucr_id  = #{eucrId}
+           AND batch_no = #{batchNo}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.oom.eval.OomCheckVrfrEvalMapper">
+
+    <sql id="evalColumns">
+        v.oom_id,
+        v.vrfcn_inst_id,
+        i.vrfcn_inst_nm,
+        v.eval_grd_cd,
+        v.eval_rmrk,
+        v.use_bgng_dt,
+        v.use_end_dt,
+        v.frst_reg_dt,
+        v.frst_reg_user_id,
+        v.last_chg_dt,
+        v.last_chg_user_id
+    </sql>
+
+    <sql id="evalFromJoin">
+        FROM er.tn_oom_check_vrfr_eval v
+        JOIN com.tn_vrfcn_inst i ON i.vrfcn_inst_id = v.vrfcn_inst_id
+                                  AND NOW() BETWEEN i.use_bgng_dt AND i.use_end_dt
+       WHERE NOW() BETWEEN v.use_bgng_dt AND v.use_end_dt
+    </sql>
+
+    <select id="selectByOomId"
+            resultType="kr.go.molit.icas.er.oom.eval.domain.OomCheckVrfrEvalVO">
+        SELECT <include refid="evalColumns"/>
+        <include refid="evalFromJoin"/>
+           AND v.oom_id = #{oomId}
+         ORDER BY v.vrfcn_inst_id
+    </select>
+
+    <select id="selectOne"
+            resultType="kr.go.molit.icas.er.oom.eval.domain.OomCheckVrfrEvalVO">
+        SELECT <include refid="evalColumns"/>
+        <include refid="evalFromJoin"/>
+           AND v.oom_id        = #{oomId}
+           AND v.vrfcn_inst_id = #{vrfcnInstId}
+    </select>
+
+    <insert id="insertEval"
+            parameterType="kr.go.molit.icas.er.oom.eval.domain.OomCheckVrfrEvalVO">
+        INSERT INTO er.tn_oom_check_vrfr_eval
+            (oom_id, vrfcn_inst_id, eval_grd_cd, eval_rmrk,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{oomId}, #{vrfcnInstId}, #{evalGrdCd}, #{evalRmrk},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="updateEval"
+            parameterType="kr.go.molit.icas.er.oom.eval.domain.OomCheckVrfrEvalVO">
+        UPDATE er.tn_oom_check_vrfr_eval
+           SET eval_grd_cd      = #{evalGrdCd},
+               eval_rmrk        = #{evalRmrk},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE oom_id        = #{oomId}
+           AND vrfcn_inst_id = #{vrfcnInstId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteOne">
+        UPDATE er.tn_oom_check_vrfr_eval
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE oom_id        = #{oomId}
+           AND vrfcn_inst_id = #{vrfcnInstId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

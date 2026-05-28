@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.saf.batch.SafBatchMapper">
+
+    <select id="selectByBatchId" resultType="kr.go.molit.icas.saf.batch.domain.SafBatchVO">
+        SELECT * FROM saf.tn_saf_batch WHERE batch_id = #{batchId} AND use_end_dt > NOW()
+    </select>
+
+    <select id="countBatches" resultType="long">
+        SELECT COUNT(*) FROM saf.tn_saf_batch
+        WHERE use_end_dt > NOW()
+        <if test="oprtrId != null and oprtrId != ''">AND oprtr_id = #{oprtrId}</if>
+        <if test="batchId != null and batchId != ''">AND batch_id LIKE CONCAT('%', #{batchId}, '%')</if>
+        <if test="pocIdNo != null and pocIdNo != ''">AND poc_id_no = #{pocIdNo}</if>
+        <if test="safRecvCntryCd != null and safRecvCntryCd != ''">AND saf_recv_cntry_cd = #{safRecvCntryCd}</if>
+    </select>
+
+    <select id="selectBatches" resultType="kr.go.molit.icas.saf.batch.domain.SafBatchVO">
+        SELECT * FROM saf.tn_saf_batch
+        WHERE use_end_dt > NOW()
+        <if test="oprtrId != null and oprtrId != ''">AND oprtr_id = #{oprtrId}</if>
+        <if test="batchId != null and batchId != ''">AND batch_id LIKE CONCAT('%', #{batchId}, '%')</if>
+        <if test="pocIdNo != null and pocIdNo != ''">AND poc_id_no = #{pocIdNo}</if>
+        <if test="safRecvCntryCd != null and safRecvCntryCd != ''">AND saf_recv_cntry_cd = #{safRecvCntryCd}</if>
+        ORDER BY frst_reg_dt DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <insert id="insertBatch">
+        INSERT INTO saf.tn_saf_batch (
+            batch_id, oprtr_id, poc_id_no, poc_isue_dt,
+            dprtr_recv_co_nm, saf_recv_arprt_cd, saf_recv_cntry_cd, cust_chn_modl_cd,
+            batch_qty, energy_cn, dnsty_se_cd, neat_saf_dnsty,
+            use_bgng_dt, use_end_dt,
+            frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+        ) VALUES (
+            #{batchId}, #{oprtrId}, #{pocIdNo}, #{pocIsueDt},
+            #{dptrRecvCoNm}, #{safRecvArprtNm}, #{safRecvCntryCd}, #{custChnModlCd},
+            #{batchQty}, #{energyCn}, #{dnstySecd}, #{neatSafDnsty},
+            NOW(), '9999-12-31 23:59:59',
+            NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId}
+        )
+    </insert>
+
+    <update id="updateBatch">
+        UPDATE saf.tn_saf_batch
+        SET poc_id_no        = #{pocIdNo},
+            poc_isue_dt      = #{pocIsueDt},
+            dprtr_recv_co_nm  = #{dptrRecvCoNm},
+            saf_recv_arprt_cd = #{safRecvArprtNm},
+            saf_recv_cntry_cd = #{safRecvCntryCd},
+            cust_chn_modl_cd = #{custChnModlCd},
+            batch_qty        = #{batchQty},
+            energy_cn        = #{energyCn},
+            dnsty_se_cd       = #{dnstySecd},
+            neat_saf_dnsty   = #{neatSafDnsty},
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{lastChgUserId}
+        WHERE batch_id = #{batchId} AND use_end_dt > NOW()
+    </update>
+
+    <update id="softDeleteBatch">
+        UPDATE saf.tn_saf_batch
+        SET use_end_dt       = NOW() - INTERVAL '1 minute',
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{userId}
+        WHERE batch_id = #{batchId} AND use_end_dt > NOW()
+    </update>
+
+    <select id="selectByOprtr" resultType="kr.go.molit.icas.saf.batch.domain.SafBatchVO">
+        SELECT batch_id, poc_id_no, saf_recv_arprt_cd
+        FROM saf.tn_saf_batch
+        WHERE oprtr_id = #{oprtrId} AND use_end_dt > NOW()
+        ORDER BY frst_reg_dt DESC
+    </select>
+
+</mapper>

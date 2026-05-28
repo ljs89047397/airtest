@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.com.atrz.AtrzDmndMapper">
+
+    <!-- ──────────────────────────────────────────────────────────
+         결재 요청 목록 조회 (검색 조건 + 페이징, 유효구간 필터)
+    ────────────────────────────────────────────────────────────── -->
+    <select id="selectAtrzDmnds" parameterType="kr.go.molit.icas.com.atrz.domain.AtrzDmndSearch"
+            resultType="kr.go.molit.icas.com.atrz.domain.AtrzDmndVO">
+        SELECT d.atrz_dmnd_id,
+               d.atrz_task_id,
+               d.rfrnc_tbl_nm,
+               d.rfrnc_key_cn,
+               d.dmnd_user_id,
+               d.dmnd_dt,
+               d.atrz_st_cd,
+               d.title,
+               d.contents,
+               d.use_bgng_dt,
+               d.use_end_dt,
+               d.frst_reg_dt,
+               d.frst_reg_user_id,
+               d.last_chg_dt,
+               d.last_chg_user_id
+          FROM com.tn_atrz_dmnd d
+          JOIN com.tn_atrz_task t ON t.atrz_task_id = d.atrz_task_id
+                                  AND NOW() BETWEEN t.use_bgng_dt AND t.use_end_dt
+         WHERE NOW() BETWEEN d.use_bgng_dt AND d.use_end_dt
+        <if test="atrzTaskId != null and atrzTaskId != ''">
+           AND d.atrz_task_id = #{atrzTaskId}
+        </if>
+        <if test="atrzStCd != null and atrzStCd != ''">
+           AND d.atrz_st_cd = #{atrzStCd}
+        </if>
+        <if test="dmndUserId != null and dmndUserId != ''">
+           AND d.dmnd_user_id = #{dmndUserId}
+        </if>
+        <if test="dateFrom != null and dateFrom != ''">
+           AND d.dmnd_dt &gt;= CAST(#{dateFrom} AS DATE)
+        </if>
+        <if test="dateTo != null and dateTo != ''">
+           AND d.dmnd_dt &lt; CAST(#{dateTo} AS DATE) + INTERVAL '1 day'
+        </if>
+         ORDER BY d.dmnd_dt DESC
+         LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <!-- ──────────────────────────────────────────────────────────
+         결재 요청 총 건수 (페이징용)
+    ────────────────────────────────────────────────────────────── -->
+    <select id="countAtrzDmnds" parameterType="kr.go.molit.icas.com.atrz.domain.AtrzDmndSearch"
+            resultType="long">
+        SELECT COUNT(d.atrz_dmnd_id)
+          FROM com.tn_atrz_dmnd d
+          JOIN com.tn_atrz_task t ON t.atrz_task_id = d.atrz_task_id
+                                  AND NOW() BETWEEN t.use_bgng_dt AND t.use_end_dt
+         WHERE NOW() BETWEEN d.use_bgng_dt AND d.use_end_dt
+        <if test="atrzTaskId != null and atrzTaskId != ''">
+           AND d.atrz_task_id = #{atrzTaskId}
+        </if>
+        <if test="atrzStCd != null and atrzStCd != ''">
+           AND d.atrz_st_cd = #{atrzStCd}
+        </if>
+        <if test="dmndUserId != null and dmndUserId != ''">
+           AND d.dmnd_user_id = #{dmndUserId}
+        </if>
+        <if test="dateFrom != null and dateFrom != ''">
+           AND d.dmnd_dt &gt;= CAST(#{dateFrom} AS DATE)
+        </if>
+        <if test="dateTo != null and dateTo != ''">
+           AND d.dmnd_dt &lt; CAST(#{dateTo} AS DATE) + INTERVAL '1 day'
+        </if>
+    </select>
+
+    <!-- ──────────────────────────────────────────────────────────
+         결재 요청 단건 조회 (유효구간 포함)
+    ────────────────────────────────────────────────────────────── -->
+    <select id="selectByDmndId" resultType="kr.go.molit.icas.com.atrz.domain.AtrzDmndVO">
+        SELECT atrz_dmnd_id,
+               atrz_task_id,
+               rfrnc_tbl_nm,
+               rfrnc_key_cn,
+               dmnd_user_id,
+               dmnd_dt,
+               atrz_st_cd,
+               title,
+               contents,
+               use_bgng_dt,
+               use_end_dt,
+               frst_reg_dt,
+               frst_reg_user_id,
+               last_chg_dt,
+               last_chg_user_id
+          FROM com.tn_atrz_dmnd
+         WHERE atrz_dmnd_id = #{atrzDmndId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- ──────────────────────────────────────────────────────────
+         결재 요청 등록
+    ────────────────────────────────────────────────────────────── -->
+    <insert id="insertAtrzDmnd" parameterType="kr.go.molit.icas.com.atrz.domain.AtrzDmndVO">
+        INSERT INTO com.tn_atrz_dmnd
+            (atrz_dmnd_id, atrz_task_id, rfrnc_tbl_nm, rfrnc_key_cn,
+             dmnd_user_id, dmnd_dt, atrz_st_cd,
+             title, contents,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{atrzDmndId}, #{atrzTaskId}, #{rfrncTblNm}, #{rfrncKeyCn},
+             #{dmndUserId}, NOW(), 'PEND',
+             #{title}, #{contents},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- ──────────────────────────────────────────────────────────
+         결재 상태 코드 업데이트 (유효구간 필터 포함)
+    ────────────────────────────────────────────────────────────── -->
+    <update id="updateAtrzStCd">
+        UPDATE com.tn_atrz_dmnd
+           SET atrz_st_cd       = #{atrzStCd},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE atrz_dmnd_id = #{atrzDmndId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ──────────────────────────────────────────────────────────
+         채번용: prefix 이후 숫자 부분의 MAX 반환. 없으면 0.
+         예) prefix = "AD" → MAX 순번
+    ────────────────────────────────────────────────────────────── -->
+    <select id="countByPrefix" resultType="int">
+        SELECT COALESCE(
+                   MAX(CAST(SUBSTRING(atrz_dmnd_id, LENGTH(#{prefix}) + 1) AS INTEGER)),
+                   0
+               )
+          FROM com.tn_atrz_dmnd
+         WHERE atrz_dmnd_id LIKE #{prefix} || '%'
+           AND SUBSTRING(atrz_dmnd_id, LENGTH(#{prefix}) + 1) ~ '^[0-9]+$'
+    </select>
+
+</mapper>

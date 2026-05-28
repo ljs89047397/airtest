@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.oom.OomCheckMapper">
+
+    <sql id="oomColumns">
+        m.oom_id,
+        m.oprtr_id,
+        o.oprtr_nm,
+        m.rprt_yr,
+        m.er_id,
+        m.vr_id,
+        m.oom_st_cd,
+        m.oom_rslt_cd,
+        m.inspn_dt,
+        m.inspctr_user_id,
+        m.use_bgng_dt,
+        m.use_end_dt,
+        m.frst_reg_dt,
+        m.frst_reg_user_id,
+        m.last_chg_dt,
+        m.last_chg_user_id
+    </sql>
+
+    <sql id="oomFromJoin">
+        FROM er.tn_oom_check m
+        JOIN com.tn_oprtr o ON o.oprtr_id = m.oprtr_id
+                            AND NOW() BETWEEN o.use_bgng_dt AND o.use_end_dt
+       WHERE NOW() BETWEEN m.use_bgng_dt AND m.use_end_dt
+    </sql>
+
+    <sql id="oomSearchConditions">
+        <if test="oprtrId != null and oprtrId != ''">  AND m.oprtr_id    = #{oprtrId}  </if>
+        <if test="rprtYr != null and rprtYr != ''">    AND m.rprt_yr     = #{rprtYr}   </if>
+        <if test="oomStCd != null and oomStCd != ''">  AND m.oom_st_cd   = #{oomStCd}  </if>
+        <if test="oomRsltCd != null and oomRsltCd != ''">AND m.oom_rslt_cd = #{oomRsltCd}</if>
+        <if test="verifierScope == true">
+            AND EXISTS (
+                SELECT 1
+                  FROM com.tn_vrfcn_assgn va
+                 WHERE va.vrfcn_inst_id = #{vrfcnInstId}
+                   AND va.oprtr_id      = m.oprtr_id
+                   AND va.rprt_yr       = m.rprt_yr
+                   AND NOW() BETWEEN va.use_bgng_dt AND va.use_end_dt
+            )
+        </if>
+    </sql>
+
+    <select id="selectOoms"
+            parameterType="kr.go.molit.icas.er.oom.domain.OomSearch"
+            resultType="kr.go.molit.icas.er.oom.domain.OomCheckVO">
+        SELECT <include refid="oomColumns"/>
+        <include refid="oomFromJoin"/>
+        <include refid="oomSearchConditions"/>
+         ORDER BY m.rprt_yr DESC, m.frst_reg_dt DESC
+         LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countOoms"
+            parameterType="kr.go.molit.icas.er.oom.domain.OomSearch"
+            resultType="long">
+        SELECT COUNT(*)
+        <include refid="oomFromJoin"/>
+        <include refid="oomSearchConditions"/>
+    </select>
+
+    <select id="selectByOomId" resultType="kr.go.molit.icas.er.oom.domain.OomCheckVO">
+        SELECT <include refid="oomColumns"/>
+        <include refid="oomFromJoin"/>
+           AND m.oom_id = #{oomId}
+    </select>
+
+    <select id="selectByOprtrYr" resultType="kr.go.molit.icas.er.oom.domain.OomCheckVO">
+        SELECT <include refid="oomColumns"/>
+        <include refid="oomFromJoin"/>
+           AND m.oprtr_id = #{oprtrId}
+           AND m.rprt_yr  = #{rprtYr}
+    </select>
+
+    <select id="countByPrefix" resultType="int">
+        SELECT COALESCE(
+                   MAX(CAST(SUBSTRING(oom_id, LENGTH(#{prefix}) + 1) AS INTEGER)),
+                   0
+               )
+          FROM er.tn_oom_check
+         WHERE oom_id LIKE #{prefix} || '%'
+           AND SUBSTRING(oom_id, LENGTH(#{prefix}) + 1) ~ '^[0-9]+$'
+    </select>
+
+    <insert id="insertOom" parameterType="kr.go.molit.icas.er.oom.domain.OomCheckVO">
+        INSERT INTO er.tn_oom_check
+            (oom_id, oprtr_id, rprt_yr, er_id, vr_id,
+             oom_st_cd, oom_rslt_cd,
+             inspn_dt, inspctr_user_id,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{oomId}, #{oprtrId}, #{rprtYr}, #{erId}, #{vrId},
+             'INPRG', NULL,
+             NULL, #{inspctrUserId},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- er_id, vr_id 등 링크만 수정 (점검 진행 중에 보강) -->
+    <update id="updateLinks" parameterType="kr.go.molit.icas.er.oom.domain.OomCheckVO">
+        UPDATE er.tn_oom_check
+           SET er_id            = #{erId},
+               vr_id            = #{vrId},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE oom_id    = #{oomId}
+           AND oom_st_cd = 'INPRG'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteOom">
+        UPDATE er.tn_oom_check
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE oom_id    = #{oomId}
+           AND oom_st_cd = 'INPRG'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="updateFinalize">
+        UPDATE er.tn_oom_check
+           SET oom_st_cd        = 'DONE',
+               oom_rslt_cd      = #{rsltCd},
+               inspn_dt         = CURRENT_DATE,
+               inspctr_user_id  = #{inspctrUserId},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE oom_id    = #{oomId}
+           AND oom_st_cd = 'INPRG'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="updateHold">
+        UPDATE er.tn_oom_check
+           SET oom_rslt_cd      = 'HOLD',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE oom_id    = #{oomId}
+           AND oom_st_cd = 'INPRG'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

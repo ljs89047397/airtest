@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.com.menu.MenuMapper">
+
+    <!-- 트리 조립용: sysSeCd 로 유효 메뉴 전체 1회 쿼리 (평면 목록/트리 공용).
+         LEFT JOIN tn_prgrm → prgrmUrl, apiPathPrefix 함께 조회
+         (권한 필터링 시 api_path_prefix 기준으로 IcasUser.prgrmPathsInq 와 비교)
+         sysSeCd = null 이면 전체 시스템 메뉴 반환 (관리용). -->
+    <select id="selectAllBySysSeCd" resultType="kr.go.molit.icas.com.menu.domain.MenuVO">
+        SELECT m.menu_id,
+               m.sys_se_cd,
+               m.menu_nm,
+               m.upper_menu_id,
+               m.menu_ord,
+               m.prgrm_id,
+               m.icon_nm,
+               m.use_bgng_dt,
+               m.use_end_dt,
+               m.frst_reg_dt,
+               m.frst_reg_user_id,
+               m.last_chg_dt,
+               m.last_chg_user_id,
+               p.prgrm_url,
+               p.api_path_prefix
+          FROM com.tn_sys_menu m
+          LEFT JOIN com.tn_prgrm p
+                 ON p.prgrm_id = m.prgrm_id
+                AND NOW() BETWEEN p.use_bgng_dt AND p.use_end_dt
+         WHERE NOW() BETWEEN m.use_bgng_dt AND m.use_end_dt
+        <if test="sysSeCd != null and sysSeCd != ''">
+           AND m.sys_se_cd = #{sysSeCd}
+        </if>
+         ORDER BY m.menu_ord ASC, m.menu_id ASC
+    </select>
+
+    <select id="selectMenu" resultType="kr.go.molit.icas.com.menu.domain.MenuVO">
+        SELECT menu_id,
+               sys_se_cd,
+               menu_nm,
+               upper_menu_id,
+               menu_ord,
+               prgrm_id,
+               icon_nm,
+               use_bgng_dt,
+               use_end_dt,
+               frst_reg_dt,
+               frst_reg_user_id,
+               last_chg_dt,
+               last_chg_user_id
+          FROM com.tn_sys_menu
+         WHERE menu_id = #{menuId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <select id="countChildren" resultType="int">
+        SELECT COUNT(*)
+          FROM com.tn_sys_menu
+         WHERE upper_menu_id = #{menuId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <select id="existsMenu" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1
+              FROM com.tn_sys_menu
+             WHERE menu_id = #{menuId}
+        )
+    </select>
+
+    <insert id="insertMenu">
+        INSERT INTO com.tn_sys_menu
+            (menu_id, sys_se_cd, menu_nm, upper_menu_id, menu_ord, prgrm_id, icon_nm,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{menuId}, #{sysSeCd}, #{menuNm}, #{upperMenuId}, #{menuOrd}, #{prgrmId}, #{iconNm},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="updateMenu">
+        UPDATE com.tn_sys_menu
+           SET sys_se_cd       = #{sysSeCd},
+               menu_nm         = #{menuNm},
+               upper_menu_id   = #{upperMenuId},
+               menu_ord        = #{menuOrd},
+               prgrm_id        = #{prgrmId},
+               icon_nm         = #{iconNm},
+               last_chg_dt     = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE menu_id = #{menuId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteMenu">
+        UPDATE com.tn_sys_menu
+           SET use_end_dt      = NOW() - INTERVAL '1 minute',
+               last_chg_dt     = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE menu_id = #{menuId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

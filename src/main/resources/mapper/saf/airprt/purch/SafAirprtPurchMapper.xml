@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.saf.airprt.purch.SafAirprtPurchMapper">
+
+    <select id="selectByPk" resultType="kr.go.molit.icas.saf.airprt.purch.domain.SafAirprtPurchVO">
+        SELECT * FROM saf.tn_saf_airprt_purch
+        WHERE airprt_cd = #{airprtId} AND rprt_yr = #{rprtYr}
+          AND oprtr_id = #{oprtrId} AND purch_sn = #{purchSn}
+    </select>
+
+    <select id="selectByOprtrYr" resultType="kr.go.molit.icas.saf.airprt.purch.domain.SafAirprtPurchVO">
+        SELECT * FROM saf.tn_saf_airprt_purch
+        WHERE use_end_dt > NOW()
+        <if test="oprtrId != null">AND oprtr_id = #{oprtrId}</if>
+        <if test="rprtYr != null">AND rprt_yr = #{rprtYr}</if>
+        ORDER BY rprt_yr DESC, airprt_cd, purch_sn
+    </select>
+
+    <select id="maxPurchSn" resultType="int">
+        SELECT COALESCE(MAX(purch_sn), 0)
+        FROM saf.tn_saf_airprt_purch
+        WHERE airprt_cd = #{airprtId} AND rprt_yr = #{rprtYr} AND oprtr_id = #{oprtrId}
+    </select>
+
+    <insert id="insertPurch">
+        INSERT INTO saf.tn_saf_airprt_purch (
+            airprt_cd, rprt_yr, oprtr_id, purch_sn,
+            sply_co_info, batch_id, purch_qty, fuel_type_cd, orgn_info,
+            frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+        ) VALUES (
+            #{airprtId}, #{rprtYr}, #{oprtrId}, #{purchSn},
+            #{splyCoInfo}, #{batchId}, #{purchQty}, #{fuelTypeCd}, #{orgnInfo},
+            NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId}
+        )
+    </insert>
+
+    <update id="updatePurch">
+        UPDATE saf.tn_saf_airprt_purch
+        SET sply_co_info     = #{splyCoInfo},
+            batch_id         = #{batchId},
+            purch_qty        = #{purchQty},
+            fuel_type_cd     = #{fuelTypeCd},
+            orgn_info        = #{orgnInfo},
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{lastChgUserId}
+        WHERE airprt_cd = #{airprtId} AND rprt_yr = #{rprtYr}
+          AND oprtr_id = #{oprtrId} AND purch_sn = #{purchSn}
+    </update>
+
+    <delete id="deleteByPk">
+        DELETE FROM saf.tn_saf_airprt_purch
+        WHERE airprt_cd = #{airprtId} AND rprt_yr = #{rprtYr}
+          AND oprtr_id = #{oprtrId} AND purch_sn = #{purchSn}
+    </delete>
+
+    <select id="sumPurchQty" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(purch_qty), 0)
+        FROM saf.tn_saf_airprt_purch
+        WHERE oprtr_id = #{oprtrId} AND rprt_yr = #{rprtYr}
+    </select>
+
+</mapper>

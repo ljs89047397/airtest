@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.emp.plan.ctrl.EmpDataCtrlMapper">
+
+    <!-- ════════════════════════════════════════════
+         공통 컬럼 목록
+         ════════════════════════════════════════════ -->
+    <sql id="ctrlColumns">
+        emp_plan_id,
+        flow_desc,
+        gap_thrshld_5pct,
+        snd_src_use_desc,
+        risk_anlys,
+        sig_chg_aprv_proc,
+        use_bgng_dt,
+        use_end_dt,
+        frst_reg_dt,
+        frst_reg_user_id,
+        last_chg_dt,
+        last_chg_user_id
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         단건 조회 (유효구간 필터)
+         ════════════════════════════════════════════ -->
+    <select id="selectByPlanId"
+            resultType="kr.go.molit.icas.emp.plan.ctrl.domain.EmpDataCtrlVO">
+        SELECT <include refid="ctrlColumns"/>
+          FROM emp.tn_emp_data_ctrl
+         WHERE emp_plan_id = #{empPlanId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         존재 여부 확인 (upsert 분기)
+         ════════════════════════════════════════════ -->
+    <select id="existsByPlanId" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+              FROM emp.tn_emp_data_ctrl
+             WHERE emp_plan_id = #{empPlanId}
+               AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+        )
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         신규 등록
+         gap_thrshld_5pct 미입력 시 'Y' 기본값 적용
+         ════════════════════════════════════════════ -->
+    <insert id="insertEmpDataCtrl"
+            parameterType="kr.go.molit.icas.emp.plan.ctrl.domain.EmpDataCtrlVO">
+        INSERT INTO emp.tn_emp_data_ctrl
+            (emp_plan_id,
+             flow_desc,
+             gap_thrshld_5pct,
+             snd_src_use_desc,
+             risk_anlys,
+             sig_chg_aprv_proc,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt,  frst_reg_user_id,
+             last_chg_dt,  last_chg_user_id)
+        VALUES
+            (#{empPlanId},
+             #{flowDesc},
+             COALESCE(#{gapThrshld5pct}, 'Y'),
+             #{sndSrcUseDesc},
+             #{riskAnlys},
+             #{sigChgAprvProc},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- ════════════════════════════════════════════
+         수정 (유효구간 필터 포함)
+         ════════════════════════════════════════════ -->
+    <update id="updateEmpDataCtrl"
+            parameterType="kr.go.molit.icas.emp.plan.ctrl.domain.EmpDataCtrlVO">
+        UPDATE emp.tn_emp_data_ctrl
+           SET flow_desc          = #{flowDesc},
+               gap_thrshld_5pct   = #{gapThrshld5pct},
+               snd_src_use_desc   = #{sndSrcUseDesc},
+               risk_anlys         = #{riskAnlys},
+               sig_chg_aprv_proc  = #{sigChgAprvProc},
+               last_chg_dt        = NOW(),
+               last_chg_user_id   = #{lastChgUserId}
+         WHERE emp_plan_id = #{empPlanId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         소프트삭제: use_end_dt = NOW() - 1분
+         ════════════════════════════════════════════ -->
+    <update id="softDeleteByPlanId">
+        UPDATE emp.tn_emp_data_ctrl
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE emp_plan_id = #{empPlanId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         신버전 복사 (INSERT ... SELECT)
+         emp_plan_id 를 dst 로 치환,
+         유효구간 및 감사 컬럼 재설정
+         ════════════════════════════════════════════ -->
+    <insert id="copyToNewPlan">
+        INSERT INTO emp.tn_emp_data_ctrl
+            (emp_plan_id,
+             flow_desc,
+             gap_thrshld_5pct,
+             snd_src_use_desc,
+             risk_anlys,
+             sig_chg_aprv_proc,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt,  frst_reg_user_id,
+             last_chg_dt,  last_chg_user_id)
+        SELECT #{dstEmpPlanId},
+               flow_desc,
+               gap_thrshld_5pct,
+               snd_src_use_desc,
+               risk_anlys,
+               sig_chg_aprv_proc,
+               NOW(), '9999-12-31 23:59:59',
+               NOW(), #{userId},
+               NOW(), #{userId}
+          FROM emp.tn_emp_data_ctrl
+         WHERE emp_plan_id = #{srcEmpPlanId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </insert>
+
+</mapper>

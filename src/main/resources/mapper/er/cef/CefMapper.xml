@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.cef.CefMapper">
+
+    <!-- 공통 컬럼 -->
+    <sql id="cefColumns">
+        c.cef_id,
+        c.er_id,
+        c.oprtr_id,
+        o.oprtr_nm,
+        c.rprt_yr,
+        c.cef_st_cd,
+        c.ttl_redu_amt,
+        c.sbmt_dt,
+        c.aprv_dt,
+        c.use_bgng_dt,
+        c.use_end_dt,
+        c.frst_reg_dt,
+        c.frst_reg_user_id,
+        c.last_chg_dt,
+        c.last_chg_user_id
+    </sql>
+
+    <sql id="cefFromJoin">
+        FROM er.tn_cef c
+        JOIN com.tn_oprtr o ON o.oprtr_id = c.oprtr_id
+                            AND NOW() BETWEEN o.use_bgng_dt AND o.use_end_dt
+       WHERE NOW() BETWEEN c.use_bgng_dt AND c.use_end_dt
+    </sql>
+
+    <sql id="cefSearchConditions">
+        <if test="oprtrId != null and oprtrId != ''">
+            AND c.oprtr_id = #{oprtrId}
+        </if>
+        <if test="rprtYr != null and rprtYr != ''">
+            AND c.rprt_yr = #{rprtYr}
+        </if>
+        <if test="cefStCd != null and cefStCd != ''">
+            AND c.cef_st_cd = #{cefStCd}
+        </if>
+        <if test="verifierScope == true">
+            AND EXISTS (
+                SELECT 1
+                  FROM com.tn_vrfcn_assgn va
+                 WHERE va.vrfcn_inst_id = #{vrfcnInstId}
+                   AND va.oprtr_id      = c.oprtr_id
+                   AND va.rprt_yr       = c.rprt_yr
+                   AND NOW() BETWEEN va.use_bgng_dt AND va.use_end_dt
+            )
+        </if>
+    </sql>
+
+    <select id="selectCefs"
+            parameterType="kr.go.molit.icas.er.cef.domain.CefSearch"
+            resultType="kr.go.molit.icas.er.cef.domain.CefVO">
+        SELECT <include refid="cefColumns"/>
+        <include refid="cefFromJoin"/>
+        <include refid="cefSearchConditions"/>
+         ORDER BY c.rprt_yr DESC, c.frst_reg_dt DESC
+         LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countCefs"
+            parameterType="kr.go.molit.icas.er.cef.domain.CefSearch"
+            resultType="long">
+        SELECT COUNT(*)
+        <include refid="cefFromJoin"/>
+        <include refid="cefSearchConditions"/>
+    </select>
+
+    <select id="selectByCefId" resultType="kr.go.molit.icas.er.cef.domain.CefVO">
+        SELECT <include refid="cefColumns"/>
+        <include refid="cefFromJoin"/>
+           AND c.cef_id = #{cefId}
+    </select>
+
+    <select id="selectByErId" resultType="kr.go.molit.icas.er.cef.domain.CefVO">
+        SELECT <include refid="cefColumns"/>
+        <include refid="cefFromJoin"/>
+           AND c.er_id = #{erId}
+    </select>
+
+    <select id="countByPrefix" resultType="int">
+        SELECT COALESCE(
+                   MAX(CAST(SUBSTRING(cef_id, LENGTH(#{prefix}) + 1) AS INTEGER)),
+                   0
+               )
+          FROM er.tn_cef
+         WHERE cef_id LIKE #{prefix} || '%'
+           AND SUBSTRING(cef_id, LENGTH(#{prefix}) + 1) ~ '^[0-9]+$'
+    </select>
+
+    <insert id="insertCef" parameterType="kr.go.molit.icas.er.cef.domain.CefVO">
+        INSERT INTO er.tn_cef
+            (cef_id, er_id, oprtr_id, rprt_yr, cef_st_cd, ttl_redu_amt,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{cefId}, #{erId}, #{oprtrId}, #{rprtYr}, 'DRAFT', 0,
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="updateCef" parameterType="kr.go.molit.icas.er.cef.domain.CefVO">
+        UPDATE er.tn_cef
+           SET last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE cef_id    = #{cefId}
+           AND cef_st_cd = 'DRAFT'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteCef">
+        UPDATE er.tn_cef
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE cef_id    = #{cefId}
+           AND cef_st_cd = 'DRAFT'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ttl_redu_amt 산출용 합계 (1차: pure_fuel_mass 단순 합계) -->
+    <select id="sumClaimMass" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(pure_fuel_mass), 0)
+          FROM er.tn_cef_claim
+         WHERE cef_id = #{cefId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <update id="updateTtlReduAmt">
+        UPDATE er.tn_cef
+           SET ttl_redu_amt     = #{ttlReduAmt},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE cef_id = #{cefId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="updateSubmit">
+        UPDATE er.tn_cef
+           SET cef_st_cd        = 'SBMTD',
+               sbmt_dt          = NOW(),
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE cef_id    = #{cefId}
+           AND cef_st_cd = 'DRAFT'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="updateCefStCd">
+        UPDATE er.tn_cef
+           SET cef_st_cd        = #{newSt},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE cef_id = #{cefId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="updateApprove">
+        UPDATE er.tn_cef
+           SET cef_st_cd        = 'APRVD',
+               aprv_dt          = NOW(),
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE cef_id    = #{cefId}
+           AND cef_st_cd = 'SBMTD'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="updateCancel">
+        UPDATE er.tn_cef
+           SET cef_st_cd        = 'CNCLD',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE cef_id    = #{cefId}
+           AND cef_st_cd = 'APRVD'
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

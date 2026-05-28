@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.emp.plan.info.EmpOprtrInfoMapper">
+
+    <!-- ════════════════════════════════════════════
+         공통 컬럼 목록
+         ════════════════════════════════════════════ -->
+    <sql id="infoColumns">
+        emp_plan_id,
+        oprtr_nm,
+        oprtr_nm_en,
+        addr,
+        lglrpr_nm,
+        icao_desig,
+        regis_mark_list,
+        aoc_no,
+        aoc_isue_dt,
+        aoc_xpr_dt,
+        aoc_athrty_nm,
+        parent_co_nm,
+        sbsdry_info,
+        use_bgng_dt,
+        use_end_dt,
+        frst_reg_dt,
+        frst_reg_user_id,
+        last_chg_dt,
+        last_chg_user_id
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         단건 조회 (유효구간 필터)
+         ════════════════════════════════════════════ -->
+    <select id="selectByPlanId"
+            resultType="kr.go.molit.icas.emp.plan.info.domain.EmpOprtrInfoVO">
+        SELECT <include refid="infoColumns"/>
+          FROM emp.tn_emp_oprtr_info
+         WHERE emp_plan_id = #{empPlanId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         존재 여부 확인 (upsert 분기)
+         ════════════════════════════════════════════ -->
+    <select id="existsByPlanId" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+              FROM emp.tn_emp_oprtr_info
+             WHERE emp_plan_id = #{empPlanId}
+               AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+        )
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         신규 등록
+         ════════════════════════════════════════════ -->
+    <insert id="insertEmpOprtrInfo"
+            parameterType="kr.go.molit.icas.emp.plan.info.domain.EmpOprtrInfoVO">
+        INSERT INTO emp.tn_emp_oprtr_info
+            (emp_plan_id,
+             oprtr_nm, oprtr_nm_en, addr, lglrpr_nm,
+             icao_desig, regis_mark_list,
+             aoc_no, aoc_isue_dt, aoc_xpr_dt, aoc_athrty_nm,
+             parent_co_nm, sbsdry_info,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt,  frst_reg_user_id,
+             last_chg_dt,  last_chg_user_id)
+        VALUES
+            (#{empPlanId},
+             #{oprtrNm}, #{oprtrNmEn}, #{addr}, #{lglrprNm},
+             #{icaoDesig}, #{regisMarkList},
+             #{aocNo}, #{aocIsueDt}, #{aocXprDt}, #{aocAthrtyNm},
+             #{parentCoNm}, #{sbsdryInfo},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- ════════════════════════════════════════════
+         수정 (유효구간 필터 포함)
+         ════════════════════════════════════════════ -->
+    <update id="updateEmpOprtrInfo"
+            parameterType="kr.go.molit.icas.emp.plan.info.domain.EmpOprtrInfoVO">
+        UPDATE emp.tn_emp_oprtr_info
+           SET oprtr_nm         = #{oprtrNm},
+               oprtr_nm_en      = #{oprtrNmEn},
+               addr             = #{addr},
+               lglrpr_nm        = #{lglrprNm},
+               icao_desig       = #{icaoDesig},
+               regis_mark_list  = #{regisMarkList},
+               aoc_no           = #{aocNo},
+               aoc_isue_dt      = #{aocIsueDt},
+               aoc_xpr_dt       = #{aocXprDt},
+               aoc_athrty_nm    = #{aocAthrtyNm},
+               parent_co_nm     = #{parentCoNm},
+               sbsdry_info      = #{sbsdryInfo},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE emp_plan_id = #{empPlanId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         소프트삭제: use_end_dt = NOW() - 1분
+         ════════════════════════════════════════════ -->
+    <update id="softDeleteByPlanId">
+        UPDATE emp.tn_emp_oprtr_info
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE emp_plan_id = #{empPlanId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         신버전 복사 (INSERT ... SELECT)
+         emp_plan_id 를 dst 로 치환,
+         유효구간 및 감사 컬럼 재설정
+         ════════════════════════════════════════════ -->
+    <insert id="copyToNewPlan">
+        INSERT INTO emp.tn_emp_oprtr_info
+            (emp_plan_id,
+             oprtr_nm, oprtr_nm_en, addr, lglrpr_nm,
+             icao_desig, regis_mark_list,
+             aoc_no, aoc_isue_dt, aoc_xpr_dt, aoc_athrty_nm,
+             parent_co_nm, sbsdry_info,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt,  frst_reg_user_id,
+             last_chg_dt,  last_chg_user_id)
+        SELECT #{dstEmpPlanId},
+               oprtr_nm, oprtr_nm_en, addr, lglrpr_nm,
+               icao_desig, regis_mark_list,
+               aoc_no, aoc_isue_dt, aoc_xpr_dt, aoc_athrty_nm,
+               parent_co_nm, sbsdry_info,
+               NOW(), '9999-12-31 23:59:59',
+               NOW(), #{userId},
+               NOW(), #{userId}
+          FROM emp.tn_emp_oprtr_info
+         WHERE emp_plan_id = #{srcEmpPlanId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </insert>
+
+</mapper>

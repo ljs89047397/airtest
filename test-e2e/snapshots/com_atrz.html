@@ -1,0 +1,551 @@
+
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>결재함 &mdash; ICAS-CEMS</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+:root { --icas-primary: #0F2C72; }
+body { background: #f0f2f5; }
+.page-header th { background: var(--icas-primary); color: #fff; font-weight: 500; font-size: 0.82rem; }
+.nav-tabs .nav-link.active { border-bottom: 3px solid var(--icas-primary); color: var(--icas-primary); font-weight: 600; }
+</style>
+</head>
+<body>
+
+
+
+<meta name="_csrf_parameter" content="_csrf" /><meta name="_csrf_header" content="X-XSRF-TOKEN" /><meta name="_csrf" content="2943d97a-e989-4bd3-8d55-4bc7a93e8cd6" />
+
+<nav class="navbar navbar-expand-lg fixed-top" style="background:#0F2C72; height:60px;">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand text-white fw-bold" href="/main">
+      &#9992; 국제항공 탄소배출량 관리시스템
+    </a>
+    <div class="d-flex align-items-center gap-3 ms-auto">
+      <span class="text-white-50 small">보고연도</span>
+      <select id="globalYr" class="form-select form-select-sm" style="width:90px;background:#1a3a8c;color:white;border-color:#2d4fa0;">
+        <option value="2026">2026</option>
+        <option value="2025">2025</option>
+        <option value="2024">2024</option>
+      </select>
+      <div class="text-white-50 small">|</div>
+      <a href="/manual" target="_blank" class="btn btn-sm btn-outline-light" title="시스템 매뉴얼 (새 창)">
+        <i class="bi bi-book me-1"></i>매뉴얼
+      </a>
+      <span class="text-white small"><i class="bi bi-person-circle me-1"></i>관리자</span>
+      <a href="/logout" class="btn btn-sm btn-outline-light">로그아웃</a>
+    </div>
+  </div>
+</nav>
+<script src="/resources/js/common/icas-esc.js"></script>
+<script src="/resources/js/common/icas-alert.js"></script>
+
+<script>
+(function() {
+    function loadCsrfScript() {
+        if (typeof jQuery === 'undefined') {
+            /* jQuery 아직 로드 안 됨 — 10ms 뒤 재시도 */
+            setTimeout(loadCsrfScript, 10);
+            return;
+        }
+        var s = document.createElement('script');
+        s.src = '/resources/js/common/icas-csrf.js';
+        s.defer = false;
+        document.head.appendChild(s);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadCsrfScript);
+    } else {
+        loadCsrfScript();
+    }
+}());
+</script>
+
+
+
+<div id="sidebar" style="width:220px;height:calc(100vh - 60px);max-height:calc(100vh - 60px);background:#1e293b;position:fixed;top:60px;left:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;">
+  <div class="p-3">
+
+    <!-- 메인 -->
+    <div class="text-white-50 small px-2 py-1 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">메인</div>
+    <a href="/main" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128202; 대시보드
+    </a>
+
+    <!-- 모니터링 계획 -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">모니터링 계획</div>
+    <a href="/emp/plan" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128221; 배출량 모니터링(EMP)
+    </a>
+
+    <!-- 배출량관리 -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">배출량관리</div>
+    <a href="/er/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128203; 배출량보고서(ER)
+    </a>
+    <a href="/vr/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#9989; 검증보고서(VR)
+    </a>
+    <a href="/er/cef/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#9981; 적격연료(CEF)
+    </a>
+    <a href="/er/eucr/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128179; 배출권취소(EUCR)
+    </a>
+    <a href="/er/oom/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128270; 적정성검토(OoM)
+    </a>
+    <a href="/er/oom/qchk/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128203; CORSIA 세부항목 검증
+    </a>
+
+    <!-- SAF -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">SAF</div>
+    <a href="/saf/dashboard" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#127807; SAF 이행현황
+    </a>
+    <a href="/saf/cert" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128209; SAF 인증서
+    </a>
+    <a href="/saf/batch" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128230; SAF 배치
+    </a>
+    <a href="/saf/airprt" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#9992; 공항별 급유&middot;구매
+    </a>
+    <a href="/saf/mntr" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128200; 혼합비율 모니터링
+    </a>
+
+    <!-- 포털 -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">포털</div>
+    <a href="/ptl/workflow" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128260; 통합 워크플로우
+    </a>
+    <a href="/ptl/stat" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128200; 통계/시뮬레이션
+    </a>
+    <a href="/ptl/ccr" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128229; CCR 추출
+    </a>
+    <a href="/ptl/sim" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#129518; 상쇄비용 시뮬
+    </a>
+    <a href="/ptl/actn" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128221; 감사로그
+    </a>
+
+    <!-- 공통 AI 서비스 (RFP 박스 ⑩ — 2차년도 자리) -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">AI 서비스</div>
+    <a href="/ai/console" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#129302; AI 콘솔 (2차년도)
+    </a>
+
+    <!-- 관리 (MOLIT/KOTSA 전용) -->
+    
+      <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">관리</div>
+      <a href="/com/user" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128100; 사용자 관리
+      </a>
+      <a href="/com/ognz" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#127970; 조직 관리
+      </a>
+      <a href="/com/oprtr" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#9992; 항공기 등록부
+      </a>
+      <a href="/com/vrfcn" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#9989; 검증기관
+      </a>
+      <a href="/com/authrt" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128272; 권한 관리
+      </a>
+      <a href="/com/role" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#127918; 역할 관리
+      </a>
+      <a href="/com/menu" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128196; 메뉴 관리
+      </a>
+      <a href="/com/prgrm" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128187; 프로그램 관리
+      </a>
+      <a href="/com/cd" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#9776; 공통코드
+      </a>
+      <a href="/com/atrz" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link active">
+        &#128221; 결재함
+      </a>
+      <a href="/com/rglt" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128218; 규정 게시판
+      </a>
+    
+
+  </div>
+</div>
+<style>
+.sidebar-link:hover, .sidebar-link.active { background:#0F2C72 !important; color:white !important; }
+/* 사이드바 스크롤바 스타일 (overflow-y:auto 보강) */
+#sidebar::-webkit-scrollbar { width:6px; }
+#sidebar::-webkit-scrollbar-track { background:#1e293b; }
+#sidebar::-webkit-scrollbar-thumb { background:#475569; border-radius:3px; }
+#sidebar::-webkit-scrollbar-thumb:hover { background:#64748b; }
+/* 마지막 항목 하단 여백 */
+#sidebar > .p-3 { padding-bottom:2rem !important; }
+</style>
+<script>
+/* ─────────────────────────────────────────────────────────
+   사이드바 스크롤 위치 보존 (sessionStorage)
+   메뉴 클릭으로 페이지 이동해도 사용자가 보던 위치 유지
+   ───────────────────────────────────────────────────────── */
+(function () {
+  var SIDEBAR_SCROLL_KEY = 'icasSidebarScrollTop';
+  function restoreScroll() {
+    var sb = document.getElementById('sidebar');
+    if (!sb) return;
+    var saved = sessionStorage.getItem(SIDEBAR_SCROLL_KEY);
+    if (saved != null) sb.scrollTop = parseInt(saved, 10) || 0;
+    // 메뉴 클릭 시 현재 스크롤 위치 저장
+    sb.querySelectorAll('a.sidebar-link').forEach(function (a) {
+      a.addEventListener('click', function () {
+        sessionStorage.setItem(SIDEBAR_SCROLL_KEY, sb.scrollTop);
+      });
+    });
+    // 스크롤 위치도 throttle 로 저장 (사용자가 스크롤만 하고 클릭 안 해도 보존)
+    var t = null;
+    sb.addEventListener('scroll', function () {
+      if (t) clearTimeout(t);
+      t = setTimeout(function () {
+        sessionStorage.setItem(SIDEBAR_SCROLL_KEY, sb.scrollTop);
+      }, 100);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', restoreScroll);
+  else restoreScroll();
+})();
+</script>
+
+
+<div style="margin-left:220px; padding-top:60px;">
+  <div class="container-fluid p-4">
+
+    <div class="mb-3">
+      <h5 class="fw-bold mb-0" style="color:var(--icas-primary);">결재함</h5>
+      <small class="text-muted">받은결재 / 내가 올린 결재 / 처리 대기</small>
+    </div>
+
+    <!-- 탭 3개 -->
+    <ul class="nav nav-tabs mb-3" id="atrzTab">
+      <li class="nav-item"><a class="nav-link active" href="#" onclick="switchTab('received');return false;">받은결재</a></li>
+      <li class="nav-item"><a class="nav-link" href="#" onclick="switchTab('mine');return false;">내가 올린</a></li>
+      <li class="nav-item">
+        <a class="nav-link" href="#" onclick="switchTab('pending');return false;">
+          처리 대기 <span id="pendingBadge" class="badge bg-danger ms-1" style="font-size:0.65rem;"></span>
+        </a>
+      </li>
+    </ul>
+
+    <!-- 검색 (received/mine 공통) -->
+    <div id="searchArea" class="card border-0 shadow-sm mb-3">
+      <div class="card-body py-2">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label small mb-1">결재상태</label>
+            <select id="searchStCd" class="form-select form-select-sm">
+              <option value="">전체</option>
+              <option value="PEND">대기</option>
+              <option value="INPRG">처리중</option>
+              <option value="APRVD">승인완료</option>
+              <option value="RJCTD">반려</option>
+              <option value="CANCLD">취소</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small mb-1">기간(시작)</label>
+            <input type="date" id="searchDateFrom" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small mb-1">기간(종료)</label>
+            <input type="date" id="searchDateTo" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-sm btn-primary w-100" onclick="loadCurrent(1)">
+              <i class="bi bi-search me-1"></i>검색
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 받은결재 탭 -->
+    <div id="tab-received">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+          <table class="table table-hover table-sm mb-0">
+            <thead class="page-header">
+              <tr>
+                <th class="ps-3">결재ID</th><th>제목</th><th>업무유형</th><th>요청자</th><th>요청일</th><th>상태</th><th class="text-center">처리</th>
+              </tr>
+            </thead>
+            <tbody id="receivedTableBody">
+              <tr><td colspan="7" class="text-center py-4 text-muted">데이터 로딩 중...</td></tr>
+            </tbody>
+          </table>
+          <div id="receivedPaging" class="d-flex justify-content-center py-3"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 내가 올린 탭 -->
+    <div id="tab-mine" class="d-none">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+          <table class="table table-hover table-sm mb-0">
+            <thead class="page-header">
+              <tr>
+                <th class="ps-3">결재ID</th><th>제목</th><th>업무유형</th><th>요청일</th><th>상태</th><th class="text-center">관리</th>
+              </tr>
+            </thead>
+            <tbody id="mineTableBody">
+              <tr><td colspan="6" class="text-center py-4 text-muted">로딩 중...</td></tr>
+            </tbody>
+          </table>
+          <div id="minePaging" class="d-flex justify-content-center py-3"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 처리 대기 탭 -->
+    <div id="tab-pending" class="d-none">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+          <table class="table table-hover table-sm mb-0">
+            <thead class="page-header">
+              <tr>
+                <th class="ps-3">결재ID</th><th>제목</th><th>업무유형</th><th>요청자</th><th>요청일</th><th>순번</th><th class="text-center">처리</th>
+              </tr>
+            </thead>
+            <tbody id="pendingTableBody">
+              <tr><td colspan="7" class="text-center py-4 text-muted">로딩 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 결재 상세/처리 모달 -->
+<div class="modal fade" id="atrzDetailModal" tabindex="-1" aria-labelledby="atrzDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--icas-primary);">
+        <h6 class="modal-title text-white fw-bold" id="atrzDetailModalLabel">결재 상세</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="atrzDetailBody"></div>
+      <div class="modal-footer" id="atrzDetailFooter">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="/resources/js/common/icas-alert.js"></script>
+<script>
+var detailModal = new bootstrap.Modal(document.getElementById('atrzDetailModal'));
+var curTab = 'received';
+var curPage = 1;
+
+$(function() {
+  loadReceived(1);
+  loadPendingCount();
+});
+
+function switchTab(tab) {
+  curTab = tab;
+  ['received','mine','pending'].forEach(function(t) { $('#tab-' + t).addClass('d-none'); });
+  $('#tab-' + tab).removeClass('d-none');
+  $('#atrzTab .nav-link').removeClass('active');
+  var idx = ['received','mine','pending'].indexOf(tab);
+  $('#atrzTab .nav-link').eq(idx).addClass('active');
+  if (tab === 'pending') { $('#searchArea').addClass('d-none'); loadPending(); }
+  else { $('#searchArea').removeClass('d-none'); loadCurrent(1); }
+}
+
+function loadCurrent(page) {
+  if (curTab === 'received') loadReceived(page);
+  else if (curTab === 'mine') loadMine(page);
+}
+
+function buildSearch(page) {
+  return { atrzStCd: $('#searchStCd').val(), dateFrom: $('#searchDateFrom').val(), dateTo: $('#searchDateTo').val(), page: page, pageSize: 15 };
+}
+
+function loadReceived(page) {
+  curPage = page;
+  $.get('/api/com/atrz', buildSearch(page)).done(function(res) {
+    renderAtrzTable('receivedTableBody', res.data, 7, true);
+    renderPaging('receivedPaging', res.data, page, 'loadReceived');
+  }).fail(function(xhr) { showErr('받은결재 로드 실패: ' + (xhr.responseJSON && xhr.responseJSON.message || xhr.statusText)); });
+}
+
+function loadMine(page) {
+  curPage = page;
+  var params = $.extend(buildSearch(page), { dmndUserId: '_me_' });
+  $.get('/api/com/atrz', params).done(function(res) {
+    renderAtrzTable('mineTableBody', res.data, 6, false);
+    renderPaging('minePaging', res.data, page, 'loadMine');
+  }).fail(function(xhr) { showErr('내 결재 로드 실패: ' + (xhr.responseJSON && xhr.responseJSON.message || xhr.statusText)); });
+}
+
+function loadPending() {
+  $.get('/api/com/atrz/my-pending').done(function(res) {
+    var rows = res.data || [];
+    $('#pendingBadge').text(rows.length || '');
+    if (!rows.length) {
+      $('#pendingTableBody').html('<tr><td colspan="7" class="text-center py-4 text-muted small">처리 대기 결재가 없습니다.</td></tr>');
+      return;
+    }
+    var html = '';
+    rows.forEach(function(p) {
+      html += '<tr>'
+        + '<td class="ps-3 small text-muted">' + escHtml(p.dmndId) + '</td>'
+        + '<td class="small">' + escHtml(p.title || '-') + '</td>'
+        + '<td class="small">' + escHtml(p.atrzTaskId || '-') + '</td>'
+        + '<td class="small">' + escHtml(p.dmndUserId || '-') + '</td>'
+        + '<td class="small text-muted">' + (p.dmndDt || '').substring(0,10) + '</td>'
+        + '<td class="small text-center">' + (p.atrzSeq != null ? p.atrzSeq : '-') + '</td>'
+        + '<td class="text-center">'
+        +   '<button class="btn btn-sm btn-outline-primary py-0 px-2 me-1" onclick="openDetail(\'' + escHtml(p.dmndId) + '\', ' + p.atrzSeq + ', true)"><i class="bi bi-check2-square me-1"></i>처리</button>'
+        + '</td></tr>';
+    });
+    $('#pendingTableBody').html(html);
+  }).fail(function(xhr) { showErr('처리대기 로드 실패: ' + (xhr.responseJSON && xhr.responseJSON.message || xhr.statusText)); });
+}
+
+function loadPendingCount() {
+  $.get('/api/com/atrz/my-pending').done(function(res) {
+    var cnt = (res.data || []).length;
+    $('#pendingBadge').text(cnt > 0 ? cnt : '');
+  });
+}
+
+function renderAtrzTable(tbodyId, page, colspan, showActions) {
+  var rows = (page && (page.rows || page.content || (Array.isArray(page) ? page : []))) || [];
+  if (!rows.length) {
+    $('#' + tbodyId).html('<tr><td colspan="' + colspan + '" class="text-center py-4 text-muted small">조회된 결재가 없습니다.</td></tr>');
+    return;
+  }
+  var stMap = { PEND:['bg-secondary','대기'], INPRG:['bg-warning text-dark','처리중'], APRVD:['bg-success','승인완료'], RJCTD:['bg-danger','반려'], CANCLD:['bg-light text-muted border','취소'] };
+  var html = '';
+  rows.forEach(function(r) {
+    var st = stMap[r.atrzStCd] || ['bg-secondary', r.atrzStCd];
+    var stBadge = '<span class="badge ' + st[0] + ' small">' + st[1] + '</span>';
+    if (showActions) {
+      html += '<tr>'
+        + '<td class="ps-3 small text-muted">' + escHtml(r.dmndId) + '</td>'
+        + '<td class="small">' + escHtml(r.title || '-') + '</td>'
+        + '<td class="small">' + escHtml(r.atrzTaskId || '-') + '</td>'
+        + '<td class="small">' + escHtml(r.dmndUserId || '-') + '</td>'
+        + '<td class="small text-muted">' + (r.dmndDt || '').substring(0,10) + '</td>'
+        + '<td>' + stBadge + '</td>'
+        + '<td class="text-center"><button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="openDetail(\'' + escHtml(r.dmndId) + '\', null, false)"><i class="bi bi-eye"></i></button></td>'
+        + '</tr>';
+    } else {
+      html += '<tr>'
+        + '<td class="ps-3 small text-muted">' + escHtml(r.dmndId) + '</td>'
+        + '<td class="small">' + escHtml(r.title || '-') + '</td>'
+        + '<td class="small">' + escHtml(r.atrzTaskId || '-') + '</td>'
+        + '<td class="small text-muted">' + (r.dmndDt || '').substring(0,10) + '</td>'
+        + '<td>' + stBadge + '</td>'
+        + '<td class="text-center">'
+        +   '<button class="btn btn-sm btn-outline-primary py-0 px-2 me-1" onclick="openDetail(\'' + escHtml(r.dmndId) + '\', null, false)"><i class="bi bi-eye"></i></button>'
+        +   (r.atrzStCd === 'PEND' || r.atrzStCd === 'INPRG' ? '<button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="cancelAtrz(\'' + escHtml(r.dmndId) + '\')"><i class="bi bi-x-circle"></i></button>' : '')
+        + '</td></tr>';
+    }
+  });
+  $('#' + tbodyId).html(html);
+}
+
+function renderPaging(pid, page, cur, fnName) {
+  if (!page || !page.totalPages) { $('#' + pid).html(''); return; }
+  var html = '<nav><ul class="pagination pagination-sm mb-0">';
+  for (var i = 1; i <= page.totalPages; i++) {
+    html += '<li class="page-item' + (i===cur?' active':'') + '"><a class="page-link" href="#" onclick="' + fnName + '(' + i + ');return false;">' + i + '</a></li>';
+  }
+  html += '</ul></nav>';
+  $('#' + pid).html(html);
+}
+
+function openDetail(dmndId, atrzSeq, canProcess) {
+  $.get('/api/com/atrz/' + encodeURIComponent(dmndId)).done(function(res) {
+    var d = res.data;
+    var dmnd = d.dmnd || d;
+    var prcsList = d.prcsList || d.prcs || [];
+    var html = '<dl class="row small mb-3">'
+      + '<dt class="col-sm-3">결재ID</dt><dd class="col-sm-9">' + escHtml(dmnd.dmndId) + '</dd>'
+      + '<dt class="col-sm-3">제목</dt><dd class="col-sm-9">' + escHtml(dmnd.title || '-') + '</dd>'
+      + '<dt class="col-sm-3">내용</dt><dd class="col-sm-9">' + escHtml(dmnd.contents || '-') + '</dd>'
+      + '<dt class="col-sm-3">업무유형</dt><dd class="col-sm-9">' + escHtml(dmnd.atrzTaskId || '-') + '</dd>'
+      + '<dt class="col-sm-3">상태</dt><dd class="col-sm-9">' + escHtml(dmnd.atrzStCd || '-') + '</dd>'
+      + '</dl>';
+    if (prcsList.length) {
+      html += '<h6 class="small fw-bold text-muted">결재 이력</h6><table class="table table-sm"><thead><tr><th>순번</th><th>결재자</th><th>처리</th><th>의견</th><th>처리일</th></tr></thead><tbody>';
+      prcsList.forEach(function(p) {
+        html += '<tr><td>' + (p.atrzSeq||'-') + '</td><td>' + escHtml(p.atrzUserId||'-') + '</td><td>' + escHtml(p.atrzStCd||'대기') + '</td><td>' + escHtml(p.atrzOpnn||'-') + '</td><td>' + (p.prcsYmd||'').substring(0,10) + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+    $('#atrzDetailBody').html(html);
+    var footer = '<button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">닫기</button>';
+    if (canProcess && atrzSeq !== null) {
+      footer += '<div class="ms-auto d-flex gap-2 align-items-center">'
+        + '<input type="text" id="atrzOpnnInput" class="form-control form-control-sm" placeholder="의견 (선택)" style="width:200px;">'
+        + '<button class="btn btn-sm btn-success" onclick="approveAtrz(\'' + escHtml(dmndId) + '\',' + atrzSeq + ')"><i class="bi bi-check-circle me-1"></i>승인</button>'
+        + '<button class="btn btn-sm btn-danger" onclick="rejectAtrz(\'' + escHtml(dmndId) + '\',' + atrzSeq + ')"><i class="bi bi-x-circle me-1"></i>반려</button>'
+        + '</div>';
+    }
+    $('#atrzDetailFooter').html(footer);
+    detailModal.show();
+  }).fail(function(xhr) { showErr('상세 조회 실패: ' + (xhr.responseJSON && xhr.responseJSON.message || xhr.statusText)); });
+}
+
+function approveAtrz(dmndId, atrzSeq) {
+  var opnn = $('#atrzOpnnInput').val();
+  $.ajax({ url: '/api/com/atrz/' + encodeURIComponent(dmndId) + '/approve', type: 'POST',
+    contentType: 'application/json', data: JSON.stringify({ atrzSeq: atrzSeq, atrzOpnn: opnn })
+  }).done(function() { detailModal.hide(); loadPending(); loadPendingCount(); })
+    .fail(function(xhr) { showErr('승인 실패: ' + (xhr.responseJSON && xhr.responseJSON.message || xhr.statusText)); });
+}
+
+function rejectAtrz(dmndId, atrzSeq) {
+  var opnn = $('#atrzOpnnInput').val();
+  if (!opnn) { IcasAlert.warning('반려 시 의견을 입력하세요.'); return; }
+  $.ajax({ url: '/api/com/atrz/' + encodeURIComponent(dmndId) + '/reject', type: 'POST',
+    contentType: 'application/json', data: JSON.stringify({ atrzSeq: atrzSeq, atrzOpnn: opnn })
+  }).done(function() { detailModal.hide(); loadPending(); loadPendingCount(); })
+    .fail(function(xhr) { showErr('반려 실패: ' + (xhr.responseJSON && xhr.responseJSON.message || xhr.statusText)); });
+}
+
+function cancelAtrz(dmndId) {
+  if (!confirm('결재를 취소하시겠습니까?')) return; /* IcasAlert.confirm 비동기 미변환 — 수동검토 */
+  $.ajax({ url: '/api/com/atrz/' + encodeURIComponent(dmndId) + '/cancel', type: 'POST' })
+    .done(function() { loadMine(curPage); })
+    .fail(function(xhr) { showErr('취소 실패: ' + (xhr.responseJSON && xhr.responseJSON.message || xhr.statusText)); });
+}
+
+function escHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+}
+function showErr(msg) { IcasAlert.error('[오류] ' + msg); }
+</script>
+</body>
+</html>

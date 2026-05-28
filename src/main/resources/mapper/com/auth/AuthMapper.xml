@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.com.auth.AuthMapper">
+
+    <select id="selectUserAuthInfo" resultType="kr.go.molit.icas.com.auth.domain.UserAuthInfo">
+        SELECT u.user_id,
+               u.user_nm,
+               u.pswd_hash,
+               u.ognz_id,
+               o.ognz_se_cd,
+               op.oprtr_id,
+               vi.vrfcn_inst_id,
+               u.acnt_lock_yn,
+               u.master_yn
+          FROM com.tn_user u
+          JOIN com.tn_ognz o ON o.ognz_id = u.ognz_id
+                            AND NOW() BETWEEN o.use_bgng_dt AND o.use_end_dt
+          LEFT JOIN com.tn_oprtr op
+                 ON op.ognz_id = u.ognz_id
+                AND NOW() BETWEEN op.use_bgng_dt AND op.use_end_dt
+          LEFT JOIN com.tn_vrfcn_inst vi
+                 ON vi.ognz_id = u.ognz_id
+                AND NOW() BETWEEN vi.use_bgng_dt AND vi.use_end_dt
+         WHERE u.user_id = #{userId}
+           AND NOW() BETWEEN u.use_bgng_dt AND u.use_end_dt
+    </select>
+
+    <select id="selectRoleIds" resultType="string">
+        SELECT urm.role_id
+          FROM com.tn_user_role_mpng urm
+         WHERE urm.user_id = #{userId}
+           AND NOW() BETWEEN urm.use_bgng_dt AND urm.use_end_dt
+    </select>
+
+    <select id="selectPrgrmPathsInq" resultType="string">
+        SELECT DISTINCT p.api_path_prefix
+          FROM com.tn_user_role_mpng urm
+          JOIN com.tn_sys_authrt_role_mpng arm
+            ON arm.role_id = urm.role_id
+           AND NOW() BETWEEN arm.use_bgng_dt AND arm.use_end_dt
+          JOIN com.tn_sys_authrt_prgrm_mpng apm
+            ON apm.authrt_id = arm.authrt_id
+           AND NOW() BETWEEN apm.use_bgng_dt AND apm.use_end_dt
+           AND apm.inq_authrt_yn = 'Y'
+          JOIN com.tn_prgrm p
+            ON p.prgrm_id = apm.prgrm_id
+           AND NOW() BETWEEN p.use_bgng_dt AND p.use_end_dt
+         WHERE urm.user_id = #{userId}
+           AND NOW() BETWEEN urm.use_bgng_dt AND urm.use_end_dt
+    </select>
+
+    <select id="selectPrgrmPathsInpt" resultType="string">
+        SELECT DISTINCT p.api_path_prefix
+          FROM com.tn_user_role_mpng urm
+          JOIN com.tn_sys_authrt_role_mpng arm
+            ON arm.role_id = urm.role_id
+           AND NOW() BETWEEN arm.use_bgng_dt AND arm.use_end_dt
+          JOIN com.tn_sys_authrt_prgrm_mpng apm
+            ON apm.authrt_id = arm.authrt_id
+           AND NOW() BETWEEN apm.use_bgng_dt AND apm.use_end_dt
+           AND apm.inpt_authrt_yn = 'Y'
+          JOIN com.tn_prgrm p
+            ON p.prgrm_id = apm.prgrm_id
+           AND NOW() BETWEEN p.use_bgng_dt AND p.use_end_dt
+         WHERE urm.user_id = #{userId}
+           AND NOW() BETWEEN urm.use_bgng_dt AND urm.use_end_dt
+    </select>
+
+    <update id="incrementPasswordFailCount">
+        UPDATE com.tn_user
+           SET pswd_fail_cnt = pswd_fail_cnt + 1,
+               acnt_lock_yn  = CASE WHEN pswd_fail_cnt + 1 &gt;= 5 THEN 'Y' ELSE acnt_lock_yn END,
+               last_chg_dt   = NOW()
+         WHERE user_id = #{userId}
+    </update>
+
+    <update id="resetPasswordFailCount">
+        UPDATE com.tn_user
+           SET pswd_fail_cnt = 0,
+               last_chg_dt   = NOW()
+         WHERE user_id = #{userId}
+    </update>
+
+    <update id="updateLastLogn">
+        UPDATE com.tn_user
+           SET last_logn_dt = NOW(),
+               last_chg_dt  = NOW()
+         WHERE user_id = #{userId}
+    </update>
+
+    <update id="lockAccount">
+        UPDATE com.tn_user
+           SET acnt_lock_yn = 'Y',
+               last_chg_dt  = NOW()
+         WHERE user_id = #{userId}
+    </update>
+
+    <insert id="insertLoginHistory">
+        INSERT INTO com.th_logn_hstry
+            (user_id, try_dt, logn_rslt_cd, fail_rsn, ip_addr, user_agent)
+        VALUES
+            (#{userId}, NOW(), #{logn_rslt_cd}, #{fail_rsn}, #{ip_addr}, #{user_agent})
+    </insert>
+</mapper>

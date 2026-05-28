@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.ptl.actn.UserActnMapper">
+
+    <!-- ════════════════════════════════════════════
+         공통 컬럼
+         TH_ 이력 테이블 — soft delete 컬럼 없음
+         ════════════════════════════════════════════ -->
+    <sql id="baseColumns">
+        actn_id,
+        user_id,
+        actn_se_cd,
+        target_tbl,
+        target_pk,
+        actn_dt,
+        rslt_cd,
+        ip_addr,
+        user_agent,
+        rmrk
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         동적 검색 조건
+         ════════════════════════════════════════════ -->
+    <sql id="searchConditions">
+        <if test="userId != null and userId != ''">
+            AND user_id = #{userId}
+        </if>
+        <if test="actnSeCd != null and actnSeCd != ''">
+            AND actn_se_cd = #{actnSeCd}
+        </if>
+        <if test="targetTbl != null and targetTbl != ''">
+            AND target_tbl = #{targetTbl}
+        </if>
+        <if test="targetPk != null and targetPk != ''">
+            AND target_pk = #{targetPk}
+        </if>
+        <if test="fromDt != null">
+            AND actn_dt >= #{fromDt}::date
+        </if>
+        <if test="toDt != null">
+            AND actn_dt &lt; (#{toDt}::date + INTERVAL '1 day')
+        </if>
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         목록 조회 (검색 + 페이징)
+         ════════════════════════════════════════════ -->
+    <select id="selectActns"
+            parameterType="kr.go.molit.icas.ptl.actn.domain.UserActnSearch"
+            resultType="kr.go.molit.icas.ptl.actn.domain.UserActnVO">
+        SELECT <include refid="baseColumns"/>
+          FROM ptl.th_user_actn
+         WHERE 1=1
+        <include refid="searchConditions"/>
+         ORDER BY actn_dt DESC
+         LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         총 건수 (페이징용)
+         ════════════════════════════════════════════ -->
+    <select id="countActns"
+            parameterType="kr.go.molit.icas.ptl.actn.domain.UserActnSearch"
+            resultType="int">
+        SELECT COUNT(*)
+          FROM ptl.th_user_actn
+         WHERE 1=1
+        <include refid="searchConditions"/>
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         행위 이력 등록
+         bigserial actn_id — useGeneratedKeys로 자동 채번 반환
+         ════════════════════════════════════════════ -->
+    <insert id="insertActn"
+            parameterType="kr.go.molit.icas.ptl.actn.domain.UserActnVO"
+            useGeneratedKeys="true"
+            keyProperty="actnId">
+        INSERT INTO ptl.th_user_actn (
+            user_id,
+            actn_se_cd,
+            target_tbl,
+            target_pk,
+            actn_dt,
+            rslt_cd,
+            ip_addr,
+            user_agent,
+            rmrk
+        ) VALUES (
+            #{userId},
+            #{actnSeCd},
+            #{targetTbl},
+            #{targetPk},
+            NOW(),
+            #{rsltCd},
+            #{ipAddr},
+            #{userAgent},
+            #{rmrk}
+        )
+    </insert>
+
+</mapper>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.saf.batch.blndr.SafBlndrMapper">
+
+    <select id="selectByBatchId" resultType="kr.go.molit.icas.saf.batch.blndr.domain.SafBlndrVO">
+        SELECT * FROM saf.tn_saf_blndr WHERE batch_id = #{batchId}
+    </select>
+
+    <insert id="insertBlndr">
+        INSERT INTO saf.tn_saf_blndr (
+            batch_id, blndr_co_info, blnd_lc_addr, recv_dt, recv_mass,
+            fuel_type_cd, blnd_ratio, trnsprt_co_info, mid_buyer_co_info,
+            frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+        ) VALUES (
+            #{batchId}, #{blndrCoInfo}, #{blndLcAddr}, #{recvDt}, #{recvMass},
+            #{fuelTypeCd}, #{blndRatio}, #{trnsprtCoInfo}, #{midBuyerCoInfo},
+            NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId}
+        )
+    </insert>
+
+    <update id="updateBlndr">
+        UPDATE saf.tn_saf_blndr
+        SET blndr_co_info    = #{blndrCoInfo},
+            blnd_lc_addr     = #{blndLcAddr},
+            recv_dt          = #{recvDt},
+            recv_mass        = #{recvMass},
+            fuel_type_cd     = #{fuelTypeCd},
+            blnd_ratio       = #{blndRatio},
+            trnsprt_co_info  = #{trnsprtCoInfo},
+            mid_buyer_co_info = #{midBuyerCoInfo},
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{lastChgUserId}
+        WHERE batch_id = #{batchId}
+    </update>
+
+    <delete id="deleteByBatchId">
+        DELETE FROM saf.tn_saf_blndr WHERE batch_id = #{batchId}
+    </delete>
+
+</mapper>

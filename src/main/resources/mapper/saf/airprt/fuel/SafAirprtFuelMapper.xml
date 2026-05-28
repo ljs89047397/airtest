@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.saf.airprt.fuel.SafAirprtFuelMapper">
+
+    <select id="selectByPk" resultType="kr.go.molit.icas.saf.airprt.fuel.domain.SafAirprtFuelVO">
+        SELECT * FROM saf.tn_saf_airprt_fuel
+        WHERE airprt_cd = #{airprtId} AND rprt_yr = #{rprtYr} AND oprtr_id = #{oprtrId}
+          AND use_end_dt > NOW()
+    </select>
+
+    <select id="selectByOprtrYr" resultType="kr.go.molit.icas.saf.airprt.fuel.domain.SafAirprtFuelVO">
+        SELECT * FROM saf.tn_saf_airprt_fuel
+        WHERE use_end_dt > NOW()
+        <if test="oprtrId != null">AND oprtr_id = #{oprtrId}</if>
+        <if test="rprtYr != null">AND rprt_yr = #{rprtYr}</if>
+        ORDER BY rprt_yr DESC, airprt_cd
+    </select>
+
+    <insert id="insertFuel">
+        INSERT INTO saf.tn_saf_airprt_fuel (
+            airprt_cd, rprt_yr, oprtr_id, flt_cnt, flt_time,
+            req_fuel_qty, actl_fuel_qty, yr_non_tanked_qty, yr_tanked_safety_qty,
+            use_bgng_dt, use_end_dt,
+            frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+        ) VALUES (
+            #{airprtId}, #{rprtYr}, #{oprtrId}, #{fltCnt}, #{fltTime},
+            #{reqFuelQty}, #{actlFuelQty}, #{yrNonTankedQty}, #{yrTankedSafetyQty},
+            NOW(), '9999-12-31 23:59:59',
+            NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId}
+        )
+    </insert>
+
+    <update id="updateFuel">
+        UPDATE saf.tn_saf_airprt_fuel
+        SET flt_cnt              = #{fltCnt},
+            flt_time             = #{fltTime},
+            req_fuel_qty         = #{reqFuelQty},
+            actl_fuel_qty        = #{actlFuelQty},
+            yr_non_tanked_qty    = #{yrNonTankedQty},
+            yr_tanked_safety_qty = #{yrTankedSafetyQty},
+            last_chg_dt          = NOW(),
+            last_chg_user_id     = #{lastChgUserId}
+        WHERE airprt_cd = #{airprtId} AND rprt_yr = #{rprtYr} AND oprtr_id = #{oprtrId}
+          AND use_end_dt > NOW()
+    </update>
+
+    <update id="softDeleteFuel">
+        UPDATE saf.tn_saf_airprt_fuel
+        SET use_end_dt       = NOW() - INTERVAL '1 minute',
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{userId}
+        WHERE airprt_cd = #{airprtId} AND rprt_yr = #{rprtYr} AND oprtr_id = #{oprtrId}
+          AND use_end_dt > NOW()
+    </update>
+
+    <select id="sumActlFuelQty" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(actl_fuel_qty), 0)
+        FROM saf.tn_saf_airprt_fuel
+        WHERE oprtr_id = #{oprtrId} AND rprt_yr = #{rprtYr} AND use_end_dt > NOW()
+    </select>
+
+</mapper>

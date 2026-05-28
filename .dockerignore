@@ -1,0 +1,10 @@
+target/
+.git/
+.claude/
+*.exe
+*.spec
+*.ico
+*.bat
+dist/
+build/
+node_modules/

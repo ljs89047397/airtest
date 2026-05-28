@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.emp.plan.EmpChgHstryMapper">
+
+    <!-- ════════════════════════════════════════════
+         변경 이력 목록 조회 (최신순)
+         ⚠️ th_emp_chg_hstry 는 use_bgng_dt/use_end_dt 없음 — 유효구간 필터 제외
+         ════════════════════════════════════════════ -->
+    <select id="selectHstryByEmpPlanId"
+            resultType="kr.go.molit.icas.emp.plan.domain.EmpChgHstryVO">
+        SELECT chg_hstry_id,
+               emp_plan_id,
+               prev_emp_plan_id,
+               chg_dt,
+               chg_chptr,
+               chg_cn,
+               sig_chg_yn,
+               chg_user_id
+          FROM emp.th_emp_chg_hstry
+         WHERE emp_plan_id = #{empPlanId}
+         ORDER BY chg_dt DESC, chg_hstry_id DESC
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         변경 이력 등록 (append-only — bigserial 자동채번)
+         ════════════════════════════════════════════ -->
+    <insert id="insertHstry"
+            parameterType="kr.go.molit.icas.emp.plan.domain.EmpChgHstryVO">
+        INSERT INTO emp.th_emp_chg_hstry
+            (emp_plan_id, prev_emp_plan_id,
+             chg_dt, chg_chptr, chg_cn,
+             sig_chg_yn, chg_user_id)
+        VALUES
+            (#{empPlanId}, #{prevEmpPlanId},
+             NOW(), #{chgChptr}, #{chgCn},
+             COALESCE(#{sigChgYn}, 'N'), #{chgUserId})
+    </insert>
+
+</mapper>

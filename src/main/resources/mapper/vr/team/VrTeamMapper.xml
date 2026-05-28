@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.vr.team.VrTeamMapper">
+
+    <select id="selectByVrId" resultType="kr.go.molit.icas.vr.team.domain.VrTeamVO">
+        SELECT * FROM vr.tn_vr_team WHERE vr_id = #{vrId} ORDER BY team_sn
+    </select>
+
+    <select id="selectByPk" resultType="kr.go.molit.icas.vr.team.domain.VrTeamVO">
+        SELECT * FROM vr.tn_vr_team WHERE vr_id = #{vrId} AND team_sn = #{teamSn}
+    </select>
+
+    <select id="maxTeamSn" resultType="int">
+        SELECT COALESCE(MAX(team_sn), 0) FROM vr.tn_vr_team WHERE vr_id = #{vrId}
+    </select>
+
+    <insert id="insertTeam">
+        INSERT INTO vr.tn_vr_team (
+            vr_id, team_sn, role_cd, user_nm, accrd_dtl, conscutv_cnt,
+            frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+        ) VALUES (
+            #{vrId}, #{teamSn}, #{roleCd}, #{userNm}, #{accrdDtl}, #{conscutvCnt},
+            NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId}
+        )
+    </insert>
+
+    <update id="updateTeam">
+        UPDATE vr.tn_vr_team
+        SET role_cd          = #{roleCd},
+            user_nm          = #{userNm},
+            accrd_dtl        = #{accrdDtl},
+            conscutv_cnt     = #{conscutvCnt},
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{lastChgUserId}
+        WHERE vr_id = #{vrId} AND team_sn = #{teamSn}
+    </update>
+
+    <delete id="deleteByPk">
+        DELETE FROM vr.tn_vr_team WHERE vr_id = #{vrId} AND team_sn = #{teamSn}
+    </delete>
+
+    <delete id="deleteByVrId">
+        DELETE FROM vr.tn_vr_team WHERE vr_id = #{vrId}
+    </delete>
+
+    <select id="selectLeadConscutvCnt" resultType="java.lang.Integer">
+        SELECT MAX(conscutv_cnt)
+        FROM vr.tn_vr_team
+        WHERE vr_id = #{vrId} AND role_cd = 'LEAD'
+    </select>
+
+</mapper>

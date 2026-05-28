@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.vr.ncnfrm.VrNcnfrmMapper">
+
+    <select id="selectByVrId" resultType="kr.go.molit.icas.vr.ncnfrm.domain.VrNcnfrmVO">
+        SELECT * FROM vr.tn_vr_ncnfrm WHERE vr_id = #{vrId} ORDER BY item_no
+    </select>
+
+    <select id="selectByPk" resultType="kr.go.molit.icas.vr.ncnfrm.domain.VrNcnfrmVO">
+        SELECT * FROM vr.tn_vr_ncnfrm WHERE vr_id = #{vrId} AND item_no = #{itemNo}
+    </select>
+
+    <select id="maxItemNo" resultType="int">
+        SELECT COALESCE(MAX(item_no), 0) FROM vr.tn_vr_ncnfrm WHERE vr_id = #{vrId}
+    </select>
+
+    <insert id="insertNcnfrm">
+        INSERT INTO vr.tn_vr_ncnfrm (
+            vr_id, item_no, ncnfrm_se_cd, desc_cn, resol_desc_cn, resol_dt,
+            frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+        ) VALUES (
+            #{vrId}, #{itemNo}, #{ncnfrmSeCd}, #{descCn}, #{resolDescCn}, #{resolDt},
+            NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId}
+        )
+    </insert>
+
+    <update id="updateNcnfrm">
+        UPDATE vr.tn_vr_ncnfrm
+        SET ncnfrm_se_cd     = #{ncnfrmSeCd},
+            desc_cn          = #{descCn},
+            resol_desc_cn    = #{resolDescCn},
+            resol_dt         = #{resolDt},
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{lastChgUserId}
+        WHERE vr_id = #{vrId} AND item_no = #{itemNo}
+    </update>
+
+    <update id="updateResolve">
+        UPDATE vr.tn_vr_ncnfrm
+        SET resol_desc_cn    = #{resolDescCn},
+            resol_dt         = #{resolDt}::DATE,
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{userId}
+        WHERE vr_id = #{vrId} AND item_no = #{itemNo}
+    </update>
+
+    <delete id="deleteByPk">
+        DELETE FROM vr.tn_vr_ncnfrm WHERE vr_id = #{vrId} AND item_no = #{itemNo}
+    </delete>
+
+    <delete id="deleteByVrId">
+        DELETE FROM vr.tn_vr_ncnfrm WHERE vr_id = #{vrId}
+    </delete>
+
+    <select id="countUnresolved" resultType="int">
+        SELECT COUNT(*) FROM vr.tn_vr_ncnfrm
+        WHERE vr_id = #{vrId} AND resol_dt IS NULL
+    </select>
+
+</mapper>

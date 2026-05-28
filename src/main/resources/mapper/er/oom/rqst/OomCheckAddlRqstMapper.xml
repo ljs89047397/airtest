@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.oom.rqst.OomCheckAddlRqstMapper">
+
+    <sql id="rqstColumns">
+        r.oom_id,
+        r.rqst_sn,
+        r.rqst_dt,
+        r.rqst_user_id,
+        r.rqst_cn,
+        r.resp_dt,
+        r.resp_user_id,
+        r.resp_cn,
+        r.use_bgng_dt,
+        r.use_end_dt,
+        r.frst_reg_dt,
+        r.frst_reg_user_id,
+        r.last_chg_dt,
+        r.last_chg_user_id
+    </sql>
+
+    <select id="selectByOomId"
+            resultType="kr.go.molit.icas.er.oom.rqst.domain.OomCheckAddlRqstVO">
+        SELECT <include refid="rqstColumns"/>
+          FROM er.tn_oom_check_addl_rqst r
+         WHERE r.oom_id = #{oomId}
+           AND NOW() BETWEEN r.use_bgng_dt AND r.use_end_dt
+         ORDER BY r.rqst_sn ASC
+    </select>
+
+    <select id="selectOne"
+            resultType="kr.go.molit.icas.er.oom.rqst.domain.OomCheckAddlRqstVO">
+        SELECT <include refid="rqstColumns"/>
+          FROM er.tn_oom_check_addl_rqst r
+         WHERE r.oom_id  = #{oomId}
+           AND r.rqst_sn = #{rqstSn}
+           AND NOW() BETWEEN r.use_bgng_dt AND r.use_end_dt
+    </select>
+
+    <select id="selectNextSn" resultType="int">
+        SELECT COALESCE(MAX(rqst_sn), 0) + 1
+          FROM er.tn_oom_check_addl_rqst
+         WHERE oom_id = #{oomId}
+    </select>
+
+    <insert id="insertRqst"
+            parameterType="kr.go.molit.icas.er.oom.rqst.domain.OomCheckAddlRqstVO">
+        INSERT INTO er.tn_oom_check_addl_rqst
+            (oom_id, rqst_sn, rqst_dt, rqst_user_id, rqst_cn,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{oomId}, #{rqstSn}, NOW(), #{rqstUserId}, #{rqstCn},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="updateResponse">
+        UPDATE er.tn_oom_check_addl_rqst
+           SET resp_dt          = NOW(),
+               resp_user_id     = #{respUserId},
+               resp_cn          = #{respCn},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{respUserId}
+         WHERE oom_id  = #{oomId}
+           AND rqst_sn = #{rqstSn}
+           AND resp_dt IS NULL
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteOne">
+        UPDATE er.tn_oom_check_addl_rqst
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE oom_id  = #{oomId}
+           AND rqst_sn = #{rqstSn}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

@@ -1,0 +1,536 @@
+
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAF 배치 목록 &mdash; ICAS-CEMS</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+:root { --icas-primary: #0F2C72; }
+body { background: #f0f2f5; }
+.page-header-bar { background: white; border-bottom: 1px solid #e5e7eb; }
+.table-icas thead th { background: #0F2C72; color: white; font-size: 0.82rem; font-weight: 500; border: none; }
+.table-icas tbody tr:hover { background: #f8f9ff; cursor: pointer; }
+</style>
+</head>
+<body>
+
+
+
+<meta name="_csrf_parameter" content="_csrf" /><meta name="_csrf_header" content="X-XSRF-TOKEN" /><meta name="_csrf" content="2943d97a-e989-4bd3-8d55-4bc7a93e8cd6" />
+
+<nav class="navbar navbar-expand-lg fixed-top" style="background:#0F2C72; height:60px;">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand text-white fw-bold" href="/main">
+      &#9992; 국제항공 탄소배출량 관리시스템
+    </a>
+    <div class="d-flex align-items-center gap-3 ms-auto">
+      <span class="text-white-50 small">보고연도</span>
+      <select id="globalYr" class="form-select form-select-sm" style="width:90px;background:#1a3a8c;color:white;border-color:#2d4fa0;">
+        <option value="2026">2026</option>
+        <option value="2025">2025</option>
+        <option value="2024">2024</option>
+      </select>
+      <div class="text-white-50 small">|</div>
+      <a href="/manual" target="_blank" class="btn btn-sm btn-outline-light" title="시스템 매뉴얼 (새 창)">
+        <i class="bi bi-book me-1"></i>매뉴얼
+      </a>
+      <span class="text-white small"><i class="bi bi-person-circle me-1"></i>관리자</span>
+      <a href="/logout" class="btn btn-sm btn-outline-light">로그아웃</a>
+    </div>
+  </div>
+</nav>
+<script src="/resources/js/common/icas-esc.js"></script>
+<script src="/resources/js/common/icas-alert.js"></script>
+
+<script>
+(function() {
+    function loadCsrfScript() {
+        if (typeof jQuery === 'undefined') {
+            /* jQuery 아직 로드 안 됨 — 10ms 뒤 재시도 */
+            setTimeout(loadCsrfScript, 10);
+            return;
+        }
+        var s = document.createElement('script');
+        s.src = '/resources/js/common/icas-csrf.js';
+        s.defer = false;
+        document.head.appendChild(s);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadCsrfScript);
+    } else {
+        loadCsrfScript();
+    }
+}());
+</script>
+
+
+
+<div id="sidebar" style="width:220px;height:calc(100vh - 60px);max-height:calc(100vh - 60px);background:#1e293b;position:fixed;top:60px;left:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;">
+  <div class="p-3">
+
+    <!-- 메인 -->
+    <div class="text-white-50 small px-2 py-1 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">메인</div>
+    <a href="/main" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128202; 대시보드
+    </a>
+
+    <!-- 모니터링 계획 -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">모니터링 계획</div>
+    <a href="/emp/plan" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128221; 배출량 모니터링(EMP)
+    </a>
+
+    <!-- 배출량관리 -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">배출량관리</div>
+    <a href="/er/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128203; 배출량보고서(ER)
+    </a>
+    <a href="/vr/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#9989; 검증보고서(VR)
+    </a>
+    <a href="/er/cef/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#9981; 적격연료(CEF)
+    </a>
+    <a href="/er/eucr/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128179; 배출권취소(EUCR)
+    </a>
+    <a href="/er/oom/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128270; 적정성검토(OoM)
+    </a>
+    <a href="/er/oom/qchk/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128203; CORSIA 세부항목 검증
+    </a>
+
+    <!-- SAF -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">SAF</div>
+    <a href="/saf/dashboard" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#127807; SAF 이행현황
+    </a>
+    <a href="/saf/cert" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128209; SAF 인증서
+    </a>
+    <a href="/saf/batch" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link active">
+      &#128230; SAF 배치
+    </a>
+    <a href="/saf/airprt" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#9992; 공항별 급유&middot;구매
+    </a>
+    <a href="/saf/mntr" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128200; 혼합비율 모니터링
+    </a>
+
+    <!-- 포털 -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">포털</div>
+    <a href="/ptl/workflow" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128260; 통합 워크플로우
+    </a>
+    <a href="/ptl/stat" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128200; 통계/시뮬레이션
+    </a>
+    <a href="/ptl/ccr" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128229; CCR 추출
+    </a>
+    <a href="/ptl/sim" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#129518; 상쇄비용 시뮬
+    </a>
+    <a href="/ptl/actn" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128221; 감사로그
+    </a>
+
+    <!-- 공통 AI 서비스 (RFP 박스 ⑩ — 2차년도 자리) -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">AI 서비스</div>
+    <a href="/ai/console" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#129302; AI 콘솔 (2차년도)
+    </a>
+
+    <!-- 관리 (MOLIT/KOTSA 전용) -->
+    
+      <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">관리</div>
+      <a href="/com/user" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128100; 사용자 관리
+      </a>
+      <a href="/com/ognz" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#127970; 조직 관리
+      </a>
+      <a href="/com/oprtr" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#9992; 항공기 등록부
+      </a>
+      <a href="/com/vrfcn" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#9989; 검증기관
+      </a>
+      <a href="/com/authrt" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128272; 권한 관리
+      </a>
+      <a href="/com/role" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#127918; 역할 관리
+      </a>
+      <a href="/com/menu" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128196; 메뉴 관리
+      </a>
+      <a href="/com/prgrm" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128187; 프로그램 관리
+      </a>
+      <a href="/com/cd" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#9776; 공통코드
+      </a>
+      <a href="/com/atrz" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128221; 결재함
+      </a>
+      <a href="/com/rglt" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128218; 규정 게시판
+      </a>
+    
+
+  </div>
+</div>
+<style>
+.sidebar-link:hover, .sidebar-link.active { background:#0F2C72 !important; color:white !important; }
+/* 사이드바 스크롤바 스타일 (overflow-y:auto 보강) */
+#sidebar::-webkit-scrollbar { width:6px; }
+#sidebar::-webkit-scrollbar-track { background:#1e293b; }
+#sidebar::-webkit-scrollbar-thumb { background:#475569; border-radius:3px; }
+#sidebar::-webkit-scrollbar-thumb:hover { background:#64748b; }
+/* 마지막 항목 하단 여백 */
+#sidebar > .p-3 { padding-bottom:2rem !important; }
+</style>
+<script>
+/* ─────────────────────────────────────────────────────────
+   사이드바 스크롤 위치 보존 (sessionStorage)
+   메뉴 클릭으로 페이지 이동해도 사용자가 보던 위치 유지
+   ───────────────────────────────────────────────────────── */
+(function () {
+  var SIDEBAR_SCROLL_KEY = 'icasSidebarScrollTop';
+  function restoreScroll() {
+    var sb = document.getElementById('sidebar');
+    if (!sb) return;
+    var saved = sessionStorage.getItem(SIDEBAR_SCROLL_KEY);
+    if (saved != null) sb.scrollTop = parseInt(saved, 10) || 0;
+    // 메뉴 클릭 시 현재 스크롤 위치 저장
+    sb.querySelectorAll('a.sidebar-link').forEach(function (a) {
+      a.addEventListener('click', function () {
+        sessionStorage.setItem(SIDEBAR_SCROLL_KEY, sb.scrollTop);
+      });
+    });
+    // 스크롤 위치도 throttle 로 저장 (사용자가 스크롤만 하고 클릭 안 해도 보존)
+    var t = null;
+    sb.addEventListener('scroll', function () {
+      if (t) clearTimeout(t);
+      t = setTimeout(function () {
+        sessionStorage.setItem(SIDEBAR_SCROLL_KEY, sb.scrollTop);
+      }, 100);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', restoreScroll);
+  else restoreScroll();
+})();
+</script>
+
+
+<div style="margin-left:220px; padding-top:60px;">
+  <!-- 페이지 헤더 -->
+  <div class="page-header-bar px-4 py-3">
+    <div class="d-flex align-items-center justify-content-between">
+      <div>
+        <h5 class="fw-bold mb-0" style="color:#0F2C72;">SAF 배치 목록</h5>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item"><a href="/main" class="text-decoration-none">홈</a></li>
+            <li class="breadcrumb-item"><a href="/saf/dashboard" class="text-decoration-none">SAF</a></li>
+            <li class="breadcrumb-item active">배치 목록</li>
+          </ol>
+        </nav>
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" id="openBatchRegBtn">
+        <i class="bi bi-plus-lg"></i> 신규 배치 등록
+      </button>
+    </div>
+  </div>
+
+  <div class="container-fluid p-4">
+    <!-- 검색 필터 -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body py-3">
+        <form id="searchForm" class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label small mb-1">배치 ID (자연키)</label>
+            <input type="text" name="batchId" class="form-control form-control-sm" placeholder="생산자 PoS Batch ID">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small mb-1">PoC 번호</label>
+            <input type="text" name="pocIdNo" class="form-control form-control-sm" placeholder="PoC ID">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small mb-1">수신 공항</label>
+            <input type="text" name="safRecvArprtNm" class="form-control form-control-sm" placeholder="공항명">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small mb-1">밀도 구분</label>
+            <select name="dnstySecCd" class="form-select form-select-sm">
+              <option value="">전체</option>
+              <option value="DEFAULT">DEFAULT</option>
+              <option value="ACTUAL">ACTUAL</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-primary btn-sm w-100">
+              <i class="bi bi-search"></i> 조회
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 그리드 -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom py-2 d-flex align-items-center justify-content-between">
+        <span class="small text-muted">총 <strong id="totalCount">0</strong>건</span>
+        <button type="button" class="btn btn-outline-success btn-sm" id="excelExportBtn">
+          <i class="bi bi-file-earmark-excel"></i> 엑셀 다운로드
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table id="batchGrid" aria-label="SAF 배치 목록" class="table table-hover table-sm mb-0 table-icas">
+            <thead>
+              <tr>
+                <th class="ps-3" style="width:4%;">No</th>
+                <th style="width:22%;">배치 ID (자연키)</th>
+                <th style="width:15%;">PoC 번호</th>
+                <th style="width:12%;">PoC 발행일</th>
+                <th style="width:15%;">수신 운영사</th>
+                <th style="width:12%;">수신 공항</th>
+                <th style="width:10%;">배치 수량 (L)</th>
+                <th style="width:10%;">등록일</th>
+              </tr>
+            </thead>
+            <tbody id="batchTableBody">
+              <tr><td colspan="8" class="text-center py-4 text-muted small">조회 버튼을 눌러 데이터를 로드하세요.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer bg-white border-top py-2 d-flex align-items-center justify-content-between">
+        <div class="small text-muted" id="pageInfo"></div>
+        <nav><ul class="pagination pagination-sm mb-0" id="pagination"></ul></nav>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================
+     신규 배치 등록 모달
+====================================================== -->
+<div class="modal fade" id="batchRegModal" tabindex="-1" aria-labelledby="batchRegModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#0F2C72;">
+        <h6 class="modal-title fw-bold text-white" id="batchRegModalLabel">
+          <i class="bi bi-plus-circle me-1"></i> SAF 배치 신규 등록
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info py-2 small mb-3">
+          <i class="bi bi-info-circle-fill me-1"></i>
+          배치 ID는 생산자 PoS에서 받은 자연키를 그대로 입력합니다 (외부 고유값).
+        </div>
+        <form id="batchRegForm" novalidate>
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label small fw-semibold">배치 ID (자연키) <span class="text-danger">*</span></label>
+              <input type="text" id="breg_batchId" class="form-control form-control-sm"
+                     placeholder="예) BATCH-2024-EU-KR-001" required maxlength="100">
+              <div class="invalid-feedback">배치 ID를 입력하세요.</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">운영사 ID <span class="text-danger">*</span></label>
+              <input type="text" id="breg_oprtrId" class="form-control form-control-sm"
+                     placeholder="예) KAL" required maxlength="20">
+              <div class="invalid-feedback">운영사 ID를 입력하세요.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">PoC 번호</label>
+              <input type="text" id="breg_pocIdNo" class="form-control form-control-sm"
+                     placeholder="예) POC-2024-001" maxlength="100">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">PoC 발행일</label>
+              <input type="date" id="breg_pocIsueDt" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">밀도 구분</label>
+              <select id="breg_dnstySecd" class="form-select form-select-sm">
+                <option value="DEFAULT">DEFAULT</option>
+                <option value="ACTUAL">ACTUAL</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">수신처 회사명</label>
+              <input type="text" id="breg_dptrRecvCoNm" class="form-control form-control-sm"
+                     placeholder="수신 운영사명" maxlength="200">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">수신 공항명</label>
+              <input type="text" id="breg_safRecvArprtNm" class="form-control form-control-sm"
+                     placeholder="예) 인천국제공항" maxlength="100">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">수신 국가코드</label>
+              <input type="text" id="breg_safRecvCntryCd" class="form-control form-control-sm"
+                     placeholder="예) KR" maxlength="2">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">배치 수량 (kg)</label>
+              <input type="number" id="breg_batchQty" class="form-control form-control-sm"
+                     placeholder="0.00" min="0" step="0.001">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">에너지 함량 (MJ)</label>
+              <input type="number" id="breg_energyCn" class="form-control form-control-sm"
+                     placeholder="0.00" min="0" step="0.001">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">취소</button>
+        <button type="button" class="btn btn-primary btn-sm" id="batchRegSubmitBtn">
+          <i class="bi bi-check-lg me-1"></i> 등록
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script>
+var currentPage = 1;
+var pageSize    = 20;
+
+function escHtml(s) { return $('<div>').text(s == null ? '-' : String(s)).html(); }
+
+function renderTable(data, totalCount, page) {
+  $('#totalCount').text(totalCount);
+  var offset = (page - 1) * pageSize;
+  var html = '';
+  if (!data || data.length === 0) {
+    html = '<tr><td colspan="8" class="text-center py-4 text-muted small">조건에 해당하는 데이터가 없습니다.</td></tr>';
+  } else {
+    $.each(data, function(i, row) {
+      html += '<tr onclick="location.href=\'/saf/batch/' + encodeURIComponent(row.batchId) + '\'">'
+        + '<td class="ps-3 small text-muted">' + (offset + i + 1) + '</td>'
+        + '<td class="small fw-semibold text-break">' + escHtml(row.batchId) + '</td>'
+        + '<td class="small">' + escHtml(row.pocIdNo) + '</td>'
+        + '<td class="small">' + escHtml(row.pocIsueDt) + '</td>'
+        + '<td class="small">' + escHtml(row.dprtrRecvCoNm) + '</td>'
+        + '<td class="small">' + escHtml(row.safRecvArprtNm) + '</td>'
+        + '<td class="small text-end">' + (row.batchQty ? Number(row.batchQty).toLocaleString() : '-') + '</td>'
+        + '<td class="small text-muted">' + escHtml(row.frstRegDt ? row.frstRegDt.substring(0,10) : null) + '</td>'
+        + '</tr>';
+    });
+  }
+  $('#batchTableBody').html(html);
+  renderPaging(totalCount, page);
+}
+
+function renderPaging(total, page) {
+  var totalPages = Math.ceil(total / pageSize);
+  var start = Math.max(1, page - 4);
+  var end   = Math.min(totalPages, page + 4);
+  var html  = '';
+  if (page > 1) html += '<li class="page-item"><a class="page-link" href="#" data-page="' + (page-1) + '">&laquo;</a></li>';
+  for (var p = start; p <= end; p++) {
+    html += '<li class="page-item' + (p === page ? ' active' : '') + '"><a class="page-link" href="#" data-page="' + p + '">' + p + '</a></li>';
+  }
+  if (page < totalPages) html += '<li class="page-item"><a class="page-link" href="#" data-page="' + (page+1) + '">&raquo;</a></li>';
+  $('#pagination').html(html);
+  $('#pageInfo').text('페이지 ' + page + ' / ' + (totalPages || 1));
+}
+
+function loadData(page) {
+  currentPage = page;
+  var params = $('#searchForm').serialize() + '&page=' + page + '&size=' + pageSize;
+  $.get('/api/saf/batch?' + params)
+    .done(function(res) {
+      var d = res.data || res;
+      var rows = d.rows || d.content || (Array.isArray(d) ? d : []);
+      var total = d.total || d.totalCount || d.totalElements || rows.length;
+      renderTable(rows, total, page);
+    })
+    .fail(function(xhr) {
+      $('#batchTableBody').html('<tr><td colspan="8" class="text-center py-4 text-danger small">데이터 조회 중 오류가 발생했습니다. (HTTP ' + xhr.status + ')</td></tr>');
+    });
+}
+
+$(function() {
+  $('#searchForm').on('submit', function(e) { e.preventDefault(); loadData(1); });
+  $(document).on('click', '#pagination .page-link', function(e) {
+    e.preventDefault();
+    loadData(parseInt($(this).data('page')));
+  });
+  $('#excelExportBtn').on('click', function() {
+    location.href = '/api/saf/batch/excel?' + $('#searchForm').serialize();
+  });
+
+  /* 배치 등록 모달 열기 */
+  $('#openBatchRegBtn').on('click', function() {
+    $('#batchRegForm')[0].reset();
+    $('#batchRegForm').removeClass('was-validated');
+    new bootstrap.Modal('#batchRegModal').show();
+  });
+
+  /* 배치 등록 제출 */
+  $('#batchRegSubmitBtn').on('click', function() {
+    var $form = $('#batchRegForm');
+    $form.addClass('was-validated');
+    if (!$form[0].checkValidity()) return;
+
+    var batchQtyVal  = $('#breg_batchQty').val();
+    var energyCnVal  = $('#breg_energyCn').val();
+
+    var payload = {
+      batchId        : $('#breg_batchId').val().trim(),
+      oprtrId        : $('#breg_oprtrId').val().trim(),
+      pocIdNo        : $('#breg_pocIdNo').val().trim() || null,
+      pocIsueDt      : $('#breg_pocIsueDt').val() || null,
+      dnstySecd      : $('#breg_dnstySecd').val(),
+      dptrRecvCoNm   : $('#breg_dptrRecvCoNm').val().trim() || null,
+      safRecvArprtNm : $('#breg_safRecvArprtNm').val().trim() || null,
+      safRecvCntryCd : $('#breg_safRecvCntryCd').val().trim() || null,
+      batchQty       : batchQtyVal ? parseFloat(batchQtyVal) : null,
+      energyCn       : energyCnVal ? parseFloat(energyCnVal) : null
+    };
+
+    var $btn = $(this);
+    $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>등록 중...');
+
+    $.ajax({
+      url         : '/api/saf/batch',
+      type        : 'POST',
+      contentType : 'application/json',
+      data        : JSON.stringify(payload)
+    })
+    .done(function(res) {
+      bootstrap.Modal.getInstance('#batchRegModal').hide();
+      IcasAlert.success(res.message || 'SAF 배치가 등록되었습니다.');
+      loadData(1);
+    })
+    .fail(function(xhr) {
+      var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'HTTP ' + xhr.status;
+      IcasAlert.error('등록 실패: ' + msg);
+    })
+    .always(function() {
+      $btn.prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i> 등록');
+    });
+  });
+
+  loadData(1);
+});
+</script>
+</body>
+</html>

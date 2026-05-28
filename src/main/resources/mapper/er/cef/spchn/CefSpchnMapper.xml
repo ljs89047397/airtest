@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.cef.spchn.CefSpchnMapper">
+
+    <sql id="spchnColumns">
+        sp.cef_id,
+        sp.claim_no,
+        sp.chn_sn,
+        sp.sply_chn_role_cd,
+        sp.co_nm,
+        sp.co_addr,
+        sp.lc_addr,
+        sp.recv_dt,
+        sp.recv_mass,
+        sp.blnd_ratio,
+        sp.blnd_evid_file_id,
+        sp.use_bgng_dt,
+        sp.use_end_dt,
+        sp.frst_reg_dt,
+        sp.frst_reg_user_id,
+        sp.last_chg_dt,
+        sp.last_chg_user_id
+    </sql>
+
+    <select id="selectByClaim"
+            resultType="kr.go.molit.icas.er.cef.spchn.domain.CefSpchnVO">
+        SELECT <include refid="spchnColumns"/>
+          FROM er.tn_cef_spchn sp
+         WHERE sp.cef_id   = #{cefId}
+           AND sp.claim_no = #{claimNo}
+           AND NOW() BETWEEN sp.use_bgng_dt AND sp.use_end_dt
+         ORDER BY sp.chn_sn ASC
+    </select>
+
+    <select id="selectOne"
+            resultType="kr.go.molit.icas.er.cef.spchn.domain.CefSpchnVO">
+        SELECT <include refid="spchnColumns"/>
+          FROM er.tn_cef_spchn sp
+         WHERE sp.cef_id   = #{cefId}
+           AND sp.claim_no = #{claimNo}
+           AND sp.chn_sn   = #{chnSn}
+           AND NOW() BETWEEN sp.use_bgng_dt AND sp.use_end_dt
+    </select>
+
+    <select id="selectNextSn" resultType="int">
+        SELECT COALESCE(MAX(chn_sn), 0) + 1
+          FROM er.tn_cef_spchn
+         WHERE cef_id   = #{cefId}
+           AND claim_no = #{claimNo}
+    </select>
+
+    <insert id="insertSpchn"
+            parameterType="kr.go.molit.icas.er.cef.spchn.domain.CefSpchnVO">
+        INSERT INTO er.tn_cef_spchn
+            (cef_id, claim_no, chn_sn, sply_chn_role_cd,
+             co_nm, co_addr, lc_addr,
+             recv_dt, recv_mass, blnd_ratio, blnd_evid_file_id,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{cefId}, #{claimNo}, #{chnSn}, #{splyChnRoleCd},
+             #{coNm}, #{coAddr}, #{lcAddr},
+             #{recvDt}, #{recvMass}, #{blndRatio}, #{blndEvidFileId},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="updateSpchn"
+            parameterType="kr.go.molit.icas.er.cef.spchn.domain.CefSpchnVO">
+        UPDATE er.tn_cef_spchn
+           SET sply_chn_role_cd  = #{splyChnRoleCd},
+               co_nm             = #{coNm},
+               co_addr           = #{coAddr},
+               lc_addr           = #{lcAddr},
+               recv_dt           = #{recvDt},
+               recv_mass         = #{recvMass},
+               blnd_ratio        = #{blndRatio},
+               blnd_evid_file_id = #{blndEvidFileId},
+               last_chg_dt       = NOW(),
+               last_chg_user_id  = #{lastChgUserId}
+         WHERE cef_id   = #{cefId}
+           AND claim_no = #{claimNo}
+           AND chn_sn   = #{chnSn}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteOne">
+        UPDATE er.tn_cef_spchn
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE cef_id   = #{cefId}
+           AND claim_no = #{claimNo}
+           AND chn_sn   = #{chnSn}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

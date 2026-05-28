@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.emp.plan.co2.EmpCo2CalcMapper">
+
+    <!-- ════════════════════════════════════════════
+         공통 컬럼 목록
+         ════════════════════════════════════════════ -->
+    <sql id="co2Columns">
+        emp_plan_id,
+        mntr_mthd_cd,
+        cert_use_yn,
+        cert_regis_mthd_cd,
+        fuel_dnsty_se_cd,
+        est_co2_emsn,
+        est_co2_basis,
+        use_bgng_dt,
+        use_end_dt,
+        frst_reg_dt,
+        frst_reg_user_id,
+        last_chg_dt,
+        last_chg_user_id
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         단건 조회 (유효구간 필터)
+         ════════════════════════════════════════════ -->
+    <select id="selectByPlanId"
+            resultType="kr.go.molit.icas.emp.plan.co2.domain.EmpCo2CalcVO">
+        SELECT <include refid="co2Columns"/>
+          FROM emp.tn_emp_co2_calc
+         WHERE emp_plan_id = #{empPlanId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         존재 여부 확인 (upsert 분기)
+         ════════════════════════════════════════════ -->
+    <select id="existsByPlanId" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+              FROM emp.tn_emp_co2_calc
+             WHERE emp_plan_id = #{empPlanId}
+               AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+        )
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         신규 등록
+         cert_use_yn 미입력 시 'N' 으로 기본값 적용
+         ════════════════════════════════════════════ -->
+    <insert id="insertEmpCo2Calc"
+            parameterType="kr.go.molit.icas.emp.plan.co2.domain.EmpCo2CalcVO">
+        INSERT INTO emp.tn_emp_co2_calc
+            (emp_plan_id,
+             mntr_mthd_cd,
+             cert_use_yn,
+             cert_regis_mthd_cd,
+             fuel_dnsty_se_cd,
+             est_co2_emsn,
+             est_co2_basis,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt,  frst_reg_user_id,
+             last_chg_dt,  last_chg_user_id)
+        VALUES
+            (#{empPlanId},
+             #{mntrMthdCd},
+             COALESCE(#{certUseYn}, 'N'),
+             #{certRegisMthdCd},
+             #{fuelDnstySecd},
+             #{estCo2Emsn},
+             #{estCo2Basis},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- ════════════════════════════════════════════
+         수정 (유효구간 필터 포함)
+         ════════════════════════════════════════════ -->
+    <update id="updateEmpCo2Calc"
+            parameterType="kr.go.molit.icas.emp.plan.co2.domain.EmpCo2CalcVO">
+        UPDATE emp.tn_emp_co2_calc
+           SET mntr_mthd_cd       = #{mntrMthdCd},
+               cert_use_yn        = #{certUseYn},
+               cert_regis_mthd_cd = #{certRegisMthdCd},
+               fuel_dnsty_se_cd   = #{fuelDnstySecd},
+               est_co2_emsn       = #{estCo2Emsn},
+               est_co2_basis      = #{estCo2Basis},
+               last_chg_dt        = NOW(),
+               last_chg_user_id   = #{lastChgUserId}
+         WHERE emp_plan_id = #{empPlanId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         소프트삭제: use_end_dt = NOW() - 1분
+         ════════════════════════════════════════════ -->
+    <update id="softDeleteByPlanId">
+        UPDATE emp.tn_emp_co2_calc
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE emp_plan_id = #{empPlanId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         신버전 복사 (INSERT ... SELECT)
+         emp_plan_id 를 dst 로 치환,
+         유효구간 및 감사 컬럼 재설정
+         ════════════════════════════════════════════ -->
+    <insert id="copyToNewPlan">
+        INSERT INTO emp.tn_emp_co2_calc
+            (emp_plan_id,
+             mntr_mthd_cd,
+             cert_use_yn,
+             cert_regis_mthd_cd,
+             fuel_dnsty_se_cd,
+             est_co2_emsn,
+             est_co2_basis,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt,  frst_reg_user_id,
+             last_chg_dt,  last_chg_user_id)
+        SELECT #{dstEmpPlanId},
+               mntr_mthd_cd,
+               cert_use_yn,
+               cert_regis_mthd_cd,
+               fuel_dnsty_se_cd,
+               est_co2_emsn,
+               est_co2_basis,
+               NOW(), '9999-12-31 23:59:59',
+               NOW(), #{userId},
+               NOW(), #{userId}
+          FROM emp.tn_emp_co2_calc
+         WHERE emp_plan_id = #{srcEmpPlanId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </insert>
+
+</mapper>

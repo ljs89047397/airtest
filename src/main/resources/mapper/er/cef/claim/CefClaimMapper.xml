@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.cef.claim.CefClaimMapper">
+
+    <sql id="claimColumns">
+        cl.cef_id,
+        cl.claim_no,
+        cl.pure_fuel_purch_dt,
+        cl.fuel_prdc_co_nm,
+        cl.fuel_prdc_addr,
+        cl.fuel_prdc_dt,
+        cl.fuel_prdc_lc,
+        cl.fuel_type_cd,
+        cl.fdstk_type_cd,
+        cl.conv_proc_cd,
+        cl.batch_id_no,
+        cl.pure_fuel_mass,
+        cl.batch_purch_ratio,
+        cl.batch_purch_mass,
+        cl.use_bgng_dt,
+        cl.use_end_dt,
+        cl.frst_reg_dt,
+        cl.frst_reg_user_id,
+        cl.last_chg_dt,
+        cl.last_chg_user_id
+    </sql>
+
+    <select id="selectByCefId"
+            resultType="kr.go.molit.icas.er.cef.claim.domain.CefClaimVO">
+        SELECT <include refid="claimColumns"/>
+          FROM er.tn_cef_claim cl
+         WHERE cl.cef_id = #{cefId}
+           AND NOW() BETWEEN cl.use_bgng_dt AND cl.use_end_dt
+         ORDER BY cl.claim_no ASC
+    </select>
+
+    <select id="selectOne"
+            resultType="kr.go.molit.icas.er.cef.claim.domain.CefClaimVO">
+        SELECT <include refid="claimColumns"/>
+          FROM er.tn_cef_claim cl
+         WHERE cl.cef_id   = #{cefId}
+           AND cl.claim_no = #{claimNo}
+           AND NOW() BETWEEN cl.use_bgng_dt AND cl.use_end_dt
+    </select>
+
+    <select id="existsClaimNo" resultType="boolean">
+        SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
+          FROM er.tn_cef_claim
+         WHERE cef_id   = #{cefId}
+           AND claim_no = #{claimNo}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <insert id="insertClaim"
+            parameterType="kr.go.molit.icas.er.cef.claim.domain.CefClaimVO">
+        INSERT INTO er.tn_cef_claim
+            (cef_id, claim_no, pure_fuel_purch_dt,
+             fuel_prdc_co_nm, fuel_prdc_addr, fuel_prdc_dt, fuel_prdc_lc,
+             fuel_type_cd, fdstk_type_cd, conv_proc_cd,
+             batch_id_no, pure_fuel_mass, batch_purch_ratio, batch_purch_mass,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{cefId}, #{claimNo}, #{pureFuelPurchDt},
+             #{fuelPrdcCoNm}, #{fuelPrdcAddr}, #{fuelPrdcDt}, #{fuelPrdcLc},
+             #{fuelTypeCd}, #{fdstkTypeCd}, #{convProcCd},
+             #{batchIdNo}, #{pureFuelMass}, #{batchPurchRatio}, #{batchPurchMass},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="updateClaim"
+            parameterType="kr.go.molit.icas.er.cef.claim.domain.CefClaimVO">
+        UPDATE er.tn_cef_claim
+           SET pure_fuel_purch_dt = #{pureFuelPurchDt},
+               fuel_prdc_co_nm    = #{fuelPrdcCoNm},
+               fuel_prdc_addr     = #{fuelPrdcAddr},
+               fuel_prdc_dt       = #{fuelPrdcDt},
+               fuel_prdc_lc       = #{fuelPrdcLc},
+               fuel_type_cd       = #{fuelTypeCd},
+               fdstk_type_cd      = #{fdstkTypeCd},
+               conv_proc_cd       = #{convProcCd},
+               batch_id_no        = #{batchIdNo},
+               pure_fuel_mass     = #{pureFuelMass},
+               batch_purch_ratio  = #{batchPurchRatio},
+               batch_purch_mass   = #{batchPurchMass},
+               last_chg_dt        = NOW(),
+               last_chg_user_id   = #{lastChgUserId}
+         WHERE cef_id   = #{cefId}
+           AND claim_no = #{claimNo}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteOne">
+        UPDATE er.tn_cef_claim
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE cef_id   = #{cefId}
+           AND claim_no = #{claimNo}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         이중청구 교차 스캔 (SFR-021)
+         ════════════════════════════════════════════ -->
+
+    <!-- 동일 batch_id_no 를 사용하는 다른 CEF 청구건 -->
+    <select id="findCefBatchConflicts"
+            resultType="kr.go.molit.icas.er.cef.validate.domain.BatchConflictRow">
+        SELECT 'CEF'                  AS source_type,
+               cl.cef_id              AS source_id,
+               cl.claim_no            AS claim_no,
+               c.oprtr_id             AS oprtr_id,
+               o.oprtr_nm             AS oprtr_nm,
+               c.rprt_yr              AS rprt_yr,
+               cl.pure_fuel_mass      AS mass
+          FROM er.tn_cef_claim cl
+          JOIN er.tn_cef       c ON c.cef_id   = cl.cef_id
+                                 AND NOW() BETWEEN c.use_bgng_dt AND c.use_end_dt
+          JOIN com.tn_oprtr    o ON o.oprtr_id = c.oprtr_id
+                                 AND NOW() BETWEEN o.use_bgng_dt AND o.use_end_dt
+         WHERE cl.batch_id_no = #{batchIdNo}
+           AND NOW() BETWEEN cl.use_bgng_dt AND cl.use_end_dt
+           <if test="excludeCefId != null and excludeCefId != ''">
+               AND NOT (cl.cef_id = #{excludeCefId}
+                        <if test="excludeClaimNo != null and excludeClaimNo != ''">
+                            AND cl.claim_no = #{excludeClaimNo}
+                        </if>
+                        )
+           </if>
+         ORDER BY c.oprtr_id, c.rprt_yr, cl.cef_id, cl.claim_no
+    </select>
+
+    <!-- 동일 batch_id 를 가진 SAF 배치 -->
+    <select id="findSafBatchConflicts"
+            resultType="kr.go.molit.icas.er.cef.validate.domain.BatchConflictRow">
+        SELECT 'SAF'              AS source_type,
+               sb.batch_id        AS source_id,
+               CAST(NULL AS varchar) AS claim_no,
+               sb.oprtr_id        AS oprtr_id,
+               o.oprtr_nm         AS oprtr_nm,
+               CAST(NULL AS char) AS rprt_yr,
+               sb.batch_qty       AS mass
+          FROM saf.tn_saf_batch sb
+          JOIN com.tn_oprtr     o ON o.oprtr_id = sb.oprtr_id
+                                  AND NOW() BETWEEN o.use_bgng_dt AND o.use_end_dt
+         WHERE sb.batch_id = #{batchIdNo}
+           AND NOW() BETWEEN sb.use_bgng_dt AND sb.use_end_dt
+         ORDER BY sb.oprtr_id
+    </select>
+
+</mapper>

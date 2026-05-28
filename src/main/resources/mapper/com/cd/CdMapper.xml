@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.com.cd.CdMapper">
+
+    <select id="selectCdGroups" resultType="kr.go.molit.icas.com.cd.domain.CdGroupVO">
+        SELECT grp_id, grp_nm, grp_desc, use_bgng_dt, use_end_dt,
+               frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+          FROM com.tc_com_cd_group
+         WHERE NOW() BETWEEN use_bgng_dt AND use_end_dt
+         ORDER BY grp_id
+    </select>
+
+    <select id="selectCdDtlsByGroup" resultType="kr.go.molit.icas.com.cd.domain.CdDtlVO">
+        SELECT grp_id, cd, cd_nm, cd_desc, cd_ord, cd_attr_1, cd_attr_2, cd_attr_3,
+               use_bgng_dt, use_end_dt, frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+          FROM com.tc_com_cd_dtl
+         WHERE grp_id = #{grpId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+         ORDER BY cd_ord, cd
+    </select>
+
+    <select id="existsValidCd" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1
+              FROM com.tc_com_cd_dtl
+             WHERE grp_id = #{grpId}
+               AND cd     = #{cd}
+               AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+        )
+    </select>
+
+    <select id="selectCdDtl" resultType="kr.go.molit.icas.com.cd.domain.CdDtlVO">
+        SELECT grp_id, cd, cd_nm, cd_desc, cd_ord, cd_attr_1, cd_attr_2, cd_attr_3,
+               use_bgng_dt, use_end_dt, frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+          FROM com.tc_com_cd_dtl
+         WHERE grp_id = #{grpId}
+           AND cd     = #{cd}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <insert id="insertCdGroup">
+        INSERT INTO com.tc_com_cd_group
+            (grp_id, grp_nm, grp_desc,
+             use_bgng_dt, use_end_dt, frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{grpId}, #{grpNm}, #{grpDesc},
+             NOW(), '9999-12-31 23:59:59', NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="updateCdGroup">
+        UPDATE com.tc_com_cd_group
+           SET grp_nm        = #{grpNm},
+               grp_desc      = #{grpDesc},
+               last_chg_dt   = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE grp_id = #{grpId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteCdGroup">
+        UPDATE com.tc_com_cd_group
+           SET use_end_dt = NOW() - INTERVAL '1 minute',
+               last_chg_dt = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE grp_id = #{grpId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <insert id="insertCdDtl">
+        INSERT INTO com.tc_com_cd_dtl
+            (grp_id, cd, cd_nm, cd_desc, cd_ord, cd_attr_1, cd_attr_2, cd_attr_3,
+             use_bgng_dt, use_end_dt, frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{grpId}, #{cd}, #{cdNm}, #{cdDesc}, #{cdOrd}, #{cdAttr1}, #{cdAttr2}, #{cdAttr3},
+             NOW(), '9999-12-31 23:59:59', NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="updateCdDtl">
+        UPDATE com.tc_com_cd_dtl
+           SET cd_nm     = #{cdNm},
+               cd_desc   = #{cdDesc},
+               cd_ord    = #{cdOrd},
+               cd_attr_1 = #{cdAttr1},
+               cd_attr_2 = #{cdAttr2},
+               cd_attr_3 = #{cdAttr3},
+               last_chg_dt = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE grp_id = #{grpId}
+           AND cd     = #{cd}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteCdDtl">
+        UPDATE com.tc_com_cd_dtl
+           SET use_end_dt = NOW() - INTERVAL '1 minute',
+               last_chg_dt = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE grp_id = #{grpId}
+           AND cd     = #{cd}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+</mapper>

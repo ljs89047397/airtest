@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.com.vrfcn.VrfcnAssgnMapper">
+
+    <select id="existsAssgn" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1
+              FROM com.tn_vrfcn_assgn
+             WHERE vrfcn_inst_id = #{vrfcnInstId}
+               AND oprtr_id      = #{oprtrId}
+               AND rprt_yr       = #{rprtYr}
+               AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+        )
+    </select>
+
+    <select id="selectAssignedOprtrIds" resultType="string">
+        SELECT oprtr_id
+          FROM com.tn_vrfcn_assgn
+         WHERE vrfcn_inst_id = #{vrfcnInstId}
+           AND rprt_yr       = #{rprtYr}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+         ORDER BY oprtr_id
+    </select>
+
+    <select id="selectAssgnList" resultType="map">
+        SELECT a.vrfcn_inst_id, vi.vrfcn_inst_nm,
+               a.oprtr_id,      o.oprtr_nm,
+               a.rprt_yr,       a.assgn_dt
+          FROM com.tn_vrfcn_assgn a
+          JOIN com.tn_vrfcn_inst vi ON vi.vrfcn_inst_id = a.vrfcn_inst_id
+                                   AND NOW() BETWEEN vi.use_bgng_dt AND vi.use_end_dt
+          JOIN com.tn_oprtr o      ON o.oprtr_id = a.oprtr_id
+                                   AND NOW() BETWEEN o.use_bgng_dt AND o.use_end_dt
+         WHERE (#{rprtYr,jdbcType=VARCHAR} IS NULL OR a.rprt_yr = #{rprtYr,jdbcType=VARCHAR})
+           AND NOW() BETWEEN a.use_bgng_dt AND a.use_end_dt
+         ORDER BY a.rprt_yr DESC, vi.vrfcn_inst_nm, o.oprtr_nm
+    </select>
+
+    <insert id="insertAssgn">
+        INSERT INTO com.tn_vrfcn_assgn
+            (vrfcn_inst_id, oprtr_id, rprt_yr, assgn_dt,
+             use_bgng_dt, use_end_dt, frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{vrfcnInstId}, #{oprtrId}, #{rprtYr}, CURRENT_DATE,
+             NOW(), '9999-12-31 23:59:59', NOW(), #{userId}, NOW(), #{userId})
+    </insert>
+
+    <update id="softDeleteAssgn">
+        UPDATE com.tn_vrfcn_assgn
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE vrfcn_inst_id = #{vrfcnInstId}
+           AND oprtr_id      = #{oprtrId}
+           AND rprt_yr       = #{rprtYr}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+</mapper>

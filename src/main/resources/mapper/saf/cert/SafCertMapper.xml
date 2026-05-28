@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.saf.cert.SafCertMapper">
+
+    <select id="selectByCertId" resultType="kr.go.molit.icas.saf.cert.domain.SafCertVO">
+        SELECT * FROM saf.tn_saf_cert
+        WHERE cert_id = #{certId} AND use_end_dt > NOW()
+    </select>
+
+    <select id="countCerts" resultType="long">
+        SELECT COUNT(*) FROM saf.tn_saf_cert
+        WHERE use_end_dt > NOW()
+        <if test="oprtrId != null and oprtrId != ''">AND oprtr_id = #{oprtrId}</if>
+        <if test="batchId != null and batchId != ''">AND batch_id = #{batchId}</if>
+        <if test="certTypeCd != null and certTypeCd != ''">AND cert_type_cd = #{certTypeCd}</if>
+        <if test="certSchmCd != null and certSchmCd != ''">AND cert_schm_cd = #{certSchmCd}</if>
+        <if test="srndYn != null and srndYn != ''">AND srnd_yn = #{srndYn}</if>
+    </select>
+
+    <select id="selectCerts" resultType="kr.go.molit.icas.saf.cert.domain.SafCertVO">
+        SELECT * FROM saf.tn_saf_cert
+        WHERE use_end_dt > NOW()
+        <if test="oprtrId != null and oprtrId != ''">AND oprtr_id = #{oprtrId}</if>
+        <if test="batchId != null and batchId != ''">AND batch_id = #{batchId}</if>
+        <if test="certTypeCd != null and certTypeCd != ''">AND cert_type_cd = #{certTypeCd}</if>
+        <if test="certSchmCd != null and certSchmCd != ''">AND cert_schm_cd = #{certSchmCd}</if>
+        <if test="srndYn != null and srndYn != ''">AND srnd_yn = #{srndYn}</if>
+        ORDER BY frst_reg_dt DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countByPrefix" resultType="int">
+        <!-- SOFT DELETE 행도 포함 (PK 충돌 회피) + 정수 가드 -->
+        SELECT COALESCE(MAX(CAST(SUBSTRING(cert_id, LENGTH(#{prefix}) + 1) AS INTEGER)), 0)
+          FROM saf.tn_saf_cert
+         WHERE cert_id LIKE #{prefix} || '%'
+           AND SUBSTRING(cert_id, LENGTH(#{prefix}) + 1) ~ '^[0-9]+$'
+    </select>
+
+    <insert id="insertCert">
+        INSERT INTO saf.tn_saf_cert (
+            cert_id, oprtr_id, batch_id, cert_type_cd, cert_schm_cd, cert_no, file_id,
+            srnd_yn, use_bgng_dt, use_end_dt,
+            frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+        ) VALUES (
+            #{certId}, #{oprtrId}, #{batchId}, #{certTypeCd}, #{certSchmCd}, #{certNo}, #{fileId},
+            'N', NOW(), '9999-12-31 23:59:59',
+            NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId}
+        )
+    </insert>
+
+    <update id="updateCert">
+        UPDATE saf.tn_saf_cert
+        SET cert_schm_cd     = #{certSchmCd},
+            cert_no          = #{certNo},
+            file_id          = #{fileId},
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{lastChgUserId}
+        WHERE cert_id = #{certId} AND srnd_yn = 'N' AND use_end_dt > NOW()
+    </update>
+
+    <update id="updateSurrender">
+        UPDATE saf.tn_saf_cert
+        SET srnd_yn          = 'Y',
+            srnd_dt          = CURRENT_DATE,
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{userId}
+        WHERE cert_id = #{certId} AND srnd_yn = 'N' AND use_end_dt > NOW()
+    </update>
+
+    <select id="sumActiveCertQty" resultType="int">
+        SELECT COALESCE(SUM(1), 0)
+        FROM saf.tn_saf_cert c
+        WHERE c.oprtr_id = #{oprtrId}
+          AND EXTRACT(YEAR FROM c.frst_reg_dt)::TEXT = #{rprtYr}
+          AND c.srnd_yn = 'N'
+          AND c.use_end_dt > NOW()
+    </select>
+
+    <update id="softDeleteCert">
+        UPDATE saf.tn_saf_cert
+        SET use_end_dt       = NOW() - INTERVAL '1 minute',
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{userId}
+        WHERE cert_id = #{certId} AND srnd_yn = 'N' AND use_end_dt > NOW()
+    </update>
+
+    <select id="selectAudits" resultType="kr.go.molit.icas.saf.cert.domain.SafCertAuditVO">
+        SELECT audit_id AS audit_sn, cert_id, actn_cd, actn_user_id AS user_id, actn_dt, rmrk
+          FROM saf.tn_saf_cert_audit
+         WHERE cert_id = #{certId}
+         ORDER BY audit_id
+    </select>
+
+    <select id="maxAuditSn" resultType="int">
+        SELECT COALESCE(MAX(audit_id), 0) FROM saf.tn_saf_cert_audit WHERE cert_id = #{certId}
+    </select>
+
+    <insert id="insertAudit">
+        INSERT INTO saf.tn_saf_cert_audit (cert_id, actn_cd, actn_user_id, actn_dt)
+        VALUES (#{certId}, #{actnCd}, #{userId}, NOW())
+    </insert>
+
+</mapper>

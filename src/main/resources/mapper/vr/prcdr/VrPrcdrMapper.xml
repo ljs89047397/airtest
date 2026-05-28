@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.vr.prcdr.VrPrcdrMapper">
+
+    <select id="selectByVrId" resultType="kr.go.molit.icas.vr.prcdr.domain.VrPrcdrVO">
+        SELECT * FROM vr.tn_vr_prcdr WHERE vr_id = #{vrId}
+    </select>
+
+    <insert id="insertPrcdr">
+        INSERT INTO vr.tn_vr_prcdr (
+            vr_id, strg_anlys_cn, risk_eval_cn, smplng_actv_cn, smplng_rslt_cn, emp_compl_cn,
+            frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+        ) VALUES (
+            #{vrId}, #{strgAnlysCn}, #{riskEvalCn}, #{smplngActvCn}, #{smplngRsltCn}, #{empComplCn},
+            NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId}
+        )
+    </insert>
+
+    <update id="updatePrcdr">
+        UPDATE vr.tn_vr_prcdr
+        SET strg_anlys_cn    = #{strgAnlysCn},
+            risk_eval_cn     = #{riskEvalCn},
+            smplng_actv_cn   = #{smplngActvCn},
+            smplng_rslt_cn   = #{smplngRsltCn},
+            emp_compl_cn     = #{empComplCn},
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{lastChgUserId}
+        WHERE vr_id = #{vrId}
+    </update>
+
+    <delete id="deleteByVrId">
+        DELETE FROM vr.tn_vr_prcdr WHERE vr_id = #{vrId}
+    </delete>
+
+</mapper>

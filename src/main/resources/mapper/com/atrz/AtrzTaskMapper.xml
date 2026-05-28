@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.com.atrz.AtrzTaskMapper">
+
+    <!-- ──────────────────────────────────────────────────────────
+         결재 업무 전체/필터 조회 (유효구간 필터)
+    ────────────────────────────────────────────────────────────── -->
+    <select id="selectAtrzTasks" resultType="kr.go.molit.icas.com.atrz.domain.AtrzTaskVO">
+        SELECT atrz_task_id,
+               atrz_task_nm,
+               atrz_task_desc,
+               sys_se_cd,
+               use_bgng_dt,
+               use_end_dt,
+               frst_reg_dt,
+               frst_reg_user_id,
+               last_chg_dt,
+               last_chg_user_id
+          FROM com.tn_atrz_task
+         WHERE NOW() BETWEEN use_bgng_dt AND use_end_dt
+        <if test="sysSeCd != null and sysSeCd != ''">
+           AND sys_se_cd = #{sysSeCd}
+        </if>
+         ORDER BY atrz_task_id
+    </select>
+
+    <!-- ──────────────────────────────────────────────────────────
+         결재 업무 단건 조회 (유효구간 포함)
+    ────────────────────────────────────────────────────────────── -->
+    <select id="selectByTaskId" resultType="kr.go.molit.icas.com.atrz.domain.AtrzTaskVO">
+        SELECT atrz_task_id,
+               atrz_task_nm,
+               atrz_task_desc,
+               sys_se_cd,
+               use_bgng_dt,
+               use_end_dt,
+               frst_reg_dt,
+               frst_reg_user_id,
+               last_chg_dt,
+               last_chg_user_id
+          FROM com.tn_atrz_task
+         WHERE atrz_task_id = #{atrzTaskId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- ──────────────────────────────────────────────────────────
+         결재 업무 ID 중복 확인 (유효구간 무관)
+    ────────────────────────────────────────────────────────────── -->
+    <select id="existsAtrzTaskId" resultType="boolean">
+        SELECT COUNT(1) > 0
+          FROM com.tn_atrz_task
+         WHERE atrz_task_id = #{atrzTaskId}
+    </select>
+
+    <!-- ──────────────────────────────────────────────────────────
+         결재 업무 등록
+    ────────────────────────────────────────────────────────────── -->
+    <insert id="insertAtrzTask" parameterType="kr.go.molit.icas.com.atrz.domain.AtrzTaskVO">
+        INSERT INTO com.tn_atrz_task
+            (atrz_task_id, atrz_task_nm, atrz_task_desc, sys_se_cd,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{atrzTaskId}, #{atrzTaskNm}, #{atrzTaskDesc}, #{sysSeCd},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- ──────────────────────────────────────────────────────────
+         결재 업무 수정 (유효구간 필터 포함)
+    ────────────────────────────────────────────────────────────── -->
+    <update id="updateAtrzTask" parameterType="kr.go.molit.icas.com.atrz.domain.AtrzTaskVO">
+        UPDATE com.tn_atrz_task
+           SET atrz_task_nm    = #{atrzTaskNm},
+               atrz_task_desc  = #{atrzTaskDesc},
+               sys_se_cd       = #{sysSeCd},
+               last_chg_dt     = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE atrz_task_id = #{atrzTaskId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ──────────────────────────────────────────────────────────
+         결재 업무 소프트삭제 (use_end_dt = NOW() - 1 minute)
+    ────────────────────────────────────────────────────────────── -->
+    <update id="softDeleteAtrzTask">
+        UPDATE com.tn_atrz_task
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE atrz_task_id = #{atrzTaskId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

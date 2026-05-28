@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.com.prgrm.AuthrtPrgrmMpngMapper">
+
+    <select id="selectByAuthrt" resultType="kr.go.molit.icas.com.prgrm.domain.AuthrtPrgrmMpngVO">
+        SELECT m.authrt_id,
+               m.prgrm_id,
+               m.inq_authrt_yn,
+               m.inpt_authrt_yn,
+               m.use_bgng_dt,
+               m.use_end_dt,
+               m.frst_reg_dt,
+               m.frst_reg_user_id,
+               m.last_chg_dt,
+               m.last_chg_user_id,
+               p.prgrm_nm,
+               p.sys_se_cd
+          FROM com.tn_sys_authrt_prgrm_mpng m
+          JOIN com.tn_prgrm p
+            ON p.prgrm_id = m.prgrm_id
+           AND NOW() BETWEEN p.use_bgng_dt AND p.use_end_dt
+         WHERE m.authrt_id = #{authrtId}
+           AND NOW() BETWEEN m.use_bgng_dt AND m.use_end_dt
+         ORDER BY p.sys_se_cd, m.prgrm_id
+    </select>
+
+    <select id="selectByPrgrm" resultType="kr.go.molit.icas.com.prgrm.domain.AuthrtPrgrmMpngVO">
+        SELECT m.authrt_id,
+               m.prgrm_id,
+               m.inq_authrt_yn,
+               m.inpt_authrt_yn,
+               m.use_bgng_dt,
+               m.use_end_dt,
+               m.frst_reg_dt,
+               m.frst_reg_user_id,
+               m.last_chg_dt,
+               m.last_chg_user_id,
+               p.prgrm_nm,
+               p.sys_se_cd
+          FROM com.tn_sys_authrt_prgrm_mpng m
+          JOIN com.tn_prgrm p
+            ON p.prgrm_id = m.prgrm_id
+           AND NOW() BETWEEN p.use_bgng_dt AND p.use_end_dt
+         WHERE m.prgrm_id = #{prgrmId}
+           AND NOW() BETWEEN m.use_bgng_dt AND m.use_end_dt
+         ORDER BY m.authrt_id
+    </select>
+
+    <select id="selectOne" resultType="kr.go.molit.icas.com.prgrm.domain.AuthrtPrgrmMpngVO">
+        SELECT authrt_id,
+               prgrm_id,
+               inq_authrt_yn,
+               inpt_authrt_yn,
+               use_bgng_dt,
+               use_end_dt,
+               frst_reg_dt,
+               frst_reg_user_id,
+               last_chg_dt,
+               last_chg_user_id
+          FROM com.tn_sys_authrt_prgrm_mpng
+         WHERE authrt_id = #{authrtId}
+           AND prgrm_id  = #{prgrmId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <insert id="insertMapping">
+        INSERT INTO com.tn_sys_authrt_prgrm_mpng
+            (authrt_id, prgrm_id, inq_authrt_yn, inpt_authrt_yn,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{authrtId}, #{prgrmId}, #{inqAuthrtYn}, #{inptAuthrtYn},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="updateMapping">
+        UPDATE com.tn_sys_authrt_prgrm_mpng
+           SET inq_authrt_yn   = #{inqAuthrtYn},
+               inpt_authrt_yn  = #{inptAuthrtYn},
+               last_chg_dt     = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE authrt_id = #{authrtId}
+           AND prgrm_id  = #{prgrmId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteMapping">
+        UPDATE com.tn_sys_authrt_prgrm_mpng
+           SET use_end_dt      = NOW() - INTERVAL '1 minute',
+               last_chg_dt     = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE authrt_id = #{authrtId}
+           AND prgrm_id  = #{prgrmId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

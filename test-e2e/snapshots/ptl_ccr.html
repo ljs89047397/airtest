@@ -1,0 +1,435 @@
+
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CCR 추출 &mdash; ICAS-CEMS</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+:root { --icas-primary: #0F2C72; }
+body { background: #f0f2f5; }
+.page-header-bar { background: white; border-bottom: 1px solid #e5e7eb; }
+.table-ccr thead th { background: #0F2C72; color: white; font-size: 0.8rem; font-weight: 500; border: none; white-space: nowrap; }
+.table-ccr tbody tr:hover { background: #f8f9ff; }
+.table-ccr td { vertical-align: middle; font-size: 0.85rem; }
+.badge-inprg { background: #ffc107; color: #333; }
+.badge-done  { background: #198754; color: white; }
+.badge-fail  { background: #dc3545; color: white; }
+</style>
+</head>
+<body>
+
+
+
+<meta name="_csrf_parameter" content="_csrf" /><meta name="_csrf_header" content="X-XSRF-TOKEN" /><meta name="_csrf" content="2943d97a-e989-4bd3-8d55-4bc7a93e8cd6" />
+
+<nav class="navbar navbar-expand-lg fixed-top" style="background:#0F2C72; height:60px;">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand text-white fw-bold" href="/main">
+      &#9992; 국제항공 탄소배출량 관리시스템
+    </a>
+    <div class="d-flex align-items-center gap-3 ms-auto">
+      <span class="text-white-50 small">보고연도</span>
+      <select id="globalYr" class="form-select form-select-sm" style="width:90px;background:#1a3a8c;color:white;border-color:#2d4fa0;">
+        <option value="2026">2026</option>
+        <option value="2025">2025</option>
+        <option value="2024">2024</option>
+      </select>
+      <div class="text-white-50 small">|</div>
+      <a href="/manual" target="_blank" class="btn btn-sm btn-outline-light" title="시스템 매뉴얼 (새 창)">
+        <i class="bi bi-book me-1"></i>매뉴얼
+      </a>
+      <span class="text-white small"><i class="bi bi-person-circle me-1"></i>관리자</span>
+      <a href="/logout" class="btn btn-sm btn-outline-light">로그아웃</a>
+    </div>
+  </div>
+</nav>
+<script src="/resources/js/common/icas-esc.js"></script>
+<script src="/resources/js/common/icas-alert.js"></script>
+
+<script>
+(function() {
+    function loadCsrfScript() {
+        if (typeof jQuery === 'undefined') {
+            /* jQuery 아직 로드 안 됨 — 10ms 뒤 재시도 */
+            setTimeout(loadCsrfScript, 10);
+            return;
+        }
+        var s = document.createElement('script');
+        s.src = '/resources/js/common/icas-csrf.js';
+        s.defer = false;
+        document.head.appendChild(s);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadCsrfScript);
+    } else {
+        loadCsrfScript();
+    }
+}());
+</script>
+
+
+
+<div id="sidebar" style="width:220px;height:calc(100vh - 60px);max-height:calc(100vh - 60px);background:#1e293b;position:fixed;top:60px;left:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;">
+  <div class="p-3">
+
+    <!-- 메인 -->
+    <div class="text-white-50 small px-2 py-1 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">메인</div>
+    <a href="/main" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128202; 대시보드
+    </a>
+
+    <!-- 모니터링 계획 -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">모니터링 계획</div>
+    <a href="/emp/plan" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128221; 배출량 모니터링(EMP)
+    </a>
+
+    <!-- 배출량관리 -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">배출량관리</div>
+    <a href="/er/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128203; 배출량보고서(ER)
+    </a>
+    <a href="/vr/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#9989; 검증보고서(VR)
+    </a>
+    <a href="/er/cef/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#9981; 적격연료(CEF)
+    </a>
+    <a href="/er/eucr/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128179; 배출권취소(EUCR)
+    </a>
+    <a href="/er/oom/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128270; 적정성검토(OoM)
+    </a>
+    <a href="/er/oom/qchk/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128203; CORSIA 세부항목 검증
+    </a>
+
+    <!-- SAF -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">SAF</div>
+    <a href="/saf/dashboard" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#127807; SAF 이행현황
+    </a>
+    <a href="/saf/cert" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128209; SAF 인증서
+    </a>
+    <a href="/saf/batch" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128230; SAF 배치
+    </a>
+    <a href="/saf/airprt" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#9992; 공항별 급유&middot;구매
+    </a>
+    <a href="/saf/mntr" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128200; 혼합비율 모니터링
+    </a>
+
+    <!-- 포털 -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">포털</div>
+    <a href="/ptl/workflow" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128260; 통합 워크플로우
+    </a>
+    <a href="/ptl/stat" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128200; 통계/시뮬레이션
+    </a>
+    <a href="/ptl/ccr" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link active">
+      &#128229; CCR 추출
+    </a>
+    <a href="/ptl/sim" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#129518; 상쇄비용 시뮬
+    </a>
+    <a href="/ptl/actn" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128221; 감사로그
+    </a>
+
+    <!-- 공통 AI 서비스 (RFP 박스 ⑩ — 2차년도 자리) -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">AI 서비스</div>
+    <a href="/ai/console" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#129302; AI 콘솔 (2차년도)
+    </a>
+
+    <!-- 관리 (MOLIT/KOTSA 전용) -->
+    
+      <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">관리</div>
+      <a href="/com/user" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128100; 사용자 관리
+      </a>
+      <a href="/com/ognz" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#127970; 조직 관리
+      </a>
+      <a href="/com/oprtr" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#9992; 항공기 등록부
+      </a>
+      <a href="/com/vrfcn" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#9989; 검증기관
+      </a>
+      <a href="/com/authrt" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128272; 권한 관리
+      </a>
+      <a href="/com/role" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#127918; 역할 관리
+      </a>
+      <a href="/com/menu" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128196; 메뉴 관리
+      </a>
+      <a href="/com/prgrm" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128187; 프로그램 관리
+      </a>
+      <a href="/com/cd" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#9776; 공통코드
+      </a>
+      <a href="/com/atrz" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128221; 결재함
+      </a>
+      <a href="/com/rglt" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128218; 규정 게시판
+      </a>
+    
+
+  </div>
+</div>
+<style>
+.sidebar-link:hover, .sidebar-link.active { background:#0F2C72 !important; color:white !important; }
+/* 사이드바 스크롤바 스타일 (overflow-y:auto 보강) */
+#sidebar::-webkit-scrollbar { width:6px; }
+#sidebar::-webkit-scrollbar-track { background:#1e293b; }
+#sidebar::-webkit-scrollbar-thumb { background:#475569; border-radius:3px; }
+#sidebar::-webkit-scrollbar-thumb:hover { background:#64748b; }
+/* 마지막 항목 하단 여백 */
+#sidebar > .p-3 { padding-bottom:2rem !important; }
+</style>
+<script>
+/* ─────────────────────────────────────────────────────────
+   사이드바 스크롤 위치 보존 (sessionStorage)
+   메뉴 클릭으로 페이지 이동해도 사용자가 보던 위치 유지
+   ───────────────────────────────────────────────────────── */
+(function () {
+  var SIDEBAR_SCROLL_KEY = 'icasSidebarScrollTop';
+  function restoreScroll() {
+    var sb = document.getElementById('sidebar');
+    if (!sb) return;
+    var saved = sessionStorage.getItem(SIDEBAR_SCROLL_KEY);
+    if (saved != null) sb.scrollTop = parseInt(saved, 10) || 0;
+    // 메뉴 클릭 시 현재 스크롤 위치 저장
+    sb.querySelectorAll('a.sidebar-link').forEach(function (a) {
+      a.addEventListener('click', function () {
+        sessionStorage.setItem(SIDEBAR_SCROLL_KEY, sb.scrollTop);
+      });
+    });
+    // 스크롤 위치도 throttle 로 저장 (사용자가 스크롤만 하고 클릭 안 해도 보존)
+    var t = null;
+    sb.addEventListener('scroll', function () {
+      if (t) clearTimeout(t);
+      t = setTimeout(function () {
+        sessionStorage.setItem(SIDEBAR_SCROLL_KEY, sb.scrollTop);
+      }, 100);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', restoreScroll);
+  else restoreScroll();
+})();
+</script>
+
+
+<div style="margin-left:220px; padding-top:60px;">
+  <!-- 페이지 헤더 -->
+  <div class="page-header-bar px-4 py-3">
+    <div class="d-flex align-items-center justify-content-between">
+      <div>
+        <h5 class="fw-bold mb-0" style="color:#0F2C72;"><i class="bi bi-cloud-download me-1"></i>CCR 추출</h5>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item"><a href="/main" class="text-decoration-none">홈</a></li>
+            <li class="breadcrumb-item active">CCR 추출</li>
+          </ol>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid p-4">
+    <!-- 추출 요청 폼 -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom py-3">
+        <h6 class="fw-bold mb-0" style="color:#0F2C72;"><i class="bi bi-send me-1"></i>추출 요청</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 align-items-end">
+          <div class="col-auto">
+            <label class="form-label small fw-semibold">보고연도 <span class="text-danger">*</span></label>
+            <select id="rprtYr" class="form-select form-select-sm" style="width:110px;">
+              <option value="2026" selected>2026</option>
+              <option value="2025">2025</option>
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <label class="form-label small fw-semibold">추출범위 <span class="text-danger">*</span></label>
+            <select id="extrScopeCd" class="form-select form-select-sm" style="width:130px;">
+              <option value="ALL" selected>전체(ALL)</option>
+              <option value="PARTIAL">부분(PARTIAL)</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <button id="btnExtract" class="btn btn-sm" style="background:#0F2C72;color:white;">
+              <i class="bi bi-cloud-download me-1"></i>추출 요청
+            </button>
+          </div>
+          <div class="col-auto">
+            <div id="extractMsg" class="small"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 추출 이력 그리드 -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+        <h6 class="fw-bold mb-0" style="color:#0F2C72;"><i class="bi bi-clock-history me-1"></i>추출 이력</h6>
+        <div class="d-flex align-items-center gap-2">
+          <span id="autoRefreshBadge" class="badge bg-warning text-dark d-none">
+            <i class="bi bi-arrow-repeat me-1"></i>자동 새로고침 (10초)
+          </span>
+          <button id="btnReload" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-clockwise me-1"></i>새로고침
+          </button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover table-sm mb-0 table-ccr">
+            <thead>
+              <tr>
+                <th class="ps-3" style="width:110px;">CE 번호</th>
+                <th style="width:80px;">보고연도</th>
+                <th style="width:110px;">추출범위</th>
+                <th style="width:100px;">상태</th>
+                <th style="width:90px;">요청자</th>
+                <th>생성일시</th>
+                <th style="width:80px;">파일</th>
+              </tr>
+            </thead>
+            <tbody id="ccrTableBody">
+              <tr><td colspan="7" class="text-center py-4 text-muted small">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>데이터 로딩 중...
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script>
+var autoRefreshTimer = null;
+
+var SCOPE_LABEL = { 'ALL': '전체', 'PARTIAL': '부분' };
+
+function renderStatus(cd) {
+  if (cd === 'INPRG') return '<span class="badge badge-inprg">진행중</span>';
+  if (cd === 'DONE')  return '<span class="badge badge-done">완료</span>';
+  if (cd === 'FAIL')  return '<span class="badge bg-danger">실패</span>';
+  return '<span class="badge bg-secondary">' + (cd || '-') + '</span>';
+}
+
+function renderTable(list) {
+  if (!list || !list.length) {
+    $('#ccrTableBody').html('<tr><td colspan="7" class="text-center py-4 text-muted small">조회된 데이터가 없습니다.</td></tr>');
+    stopAutoRefresh();
+    return;
+  }
+  var hasInprog = false;
+  var html = '';
+  list.forEach(function(row) {
+    if (row.extrStCd === 'INPRG') hasInprog = true;
+    var fileBtn = (row.extrStCd === 'DONE' && row.fileId)
+      ? '<a href="/api/ptl/ccr/' + encodeURIComponent(row.extrId) + '/download" class="btn btn-xs btn-sm btn-outline-primary py-0 px-1 small"><i class="bi bi-download"></i></a>'
+      : '<span class="text-muted small">-</span>';
+    html += '<tr>'
+      + '<td class="ps-3 fw-semibold">' + (row.extrId || '-') + '</td>'
+      + '<td>' + (row.rprtYr || '-') + '</td>'
+      + '<td>' + (SCOPE_LABEL[row.extrScopeCd] || row.extrScopeCd || '-') + '</td>'
+      + '<td>' + renderStatus(row.extrStCd) + '</td>'
+      + '<td class="text-muted">' + (row.extrUserId || '-') + '</td>'
+      + '<td class="text-muted small">' + (row.extrDt ? row.extrDt.replace('T', ' ').substring(0,19) : '-') + '</td>'
+      + '<td>' + fileBtn + '</td>'
+      + '</tr>';
+  });
+  $('#ccrTableBody').html(html);
+  if (hasInprog) {
+    startAutoRefresh();
+  } else {
+    stopAutoRefresh();
+  }
+}
+
+function loadHistory() {
+  $.get('/api/ptl/ccr?page=0&size=20')
+    .done(function(res) {
+      var data = (res.data && res.data.rows || res.data.content) ? res.data.rows || res.data.content : (res.data || []);
+      renderTable(data);
+    })
+    .fail(function(xhr) {
+      $('#ccrTableBody').html('<tr><td colspan="7" class="text-center py-4 text-danger small"><i class="bi bi-exclamation-triangle me-1"></i>데이터 조회 실패 (HTTP ' + xhr.status + ')</td></tr>');
+      stopAutoRefresh();
+    });
+}
+
+function startAutoRefresh() {
+  if (autoRefreshTimer) return;
+  $('#autoRefreshBadge').removeClass('d-none');
+  autoRefreshTimer = setInterval(function() { loadHistory(); }, 10000);
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+  $('#autoRefreshBadge').addClass('d-none');
+}
+
+function requestExtraction() {
+  var yr = $('#rprtYr').val();
+  var scope = $('#extrScopeCd').val();
+  if (!yr) { $('#extractMsg').html('<span class="text-danger">보고연도를 선택하세요.</span>'); return; }
+
+  $('#btnExtract').prop('disabled', true);
+  $('#extractMsg').html('<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>요청 중...</span>');
+
+  $.ajax({
+    url: '/api/ptl/ccr/extract',
+    type: 'POST',
+    contentType: 'application/json',
+    data: JSON.stringify({ rprtYr: yr, extrScopeCd: scope }),
+    success: function(res) {
+      var msg = (res && res.message) ? res.message : 'CCR 추출 요청이 접수되었습니다.';
+      $('#extractMsg').html('<span class="text-success"><i class="bi bi-check-circle me-1"></i>' + $('<span>').text(msg).html() + '</span>');
+      loadHistory();
+    },
+    error: function(xhr) {
+      var errMsg = '추출 요청 실패';
+      try { errMsg = JSON.parse(xhr.responseText).message || errMsg; } catch(e) {}
+      $('#extractMsg').html('<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>' + $('<span>').text(errMsg).html() + '</span>');
+    },
+    complete: function() {
+      $('#btnExtract').prop('disabled', false);
+    }
+  });
+}
+
+$(function() {
+  loadHistory();
+  $('#btnExtract').on('click', requestExtraction);
+  $('#btnReload').on('click', loadHistory);
+});
+</script>
+</body>
+</html>

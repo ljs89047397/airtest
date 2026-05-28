@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.rprt.aerdrm.ErAerdrmPairCo2Mapper">
+
+    <!-- ════════════════════════════════════════════
+         공통 컬럼 목록
+         ════════════════════════════════════════════ -->
+    <sql id="pairColumns">
+        p.er_id,
+        p.pair_sn,
+        p.dprtr_aerdrm_cd,
+        p.arvl_aerdrm_cd,
+        p.dprtr_cntry_cd,
+        p.arvl_cntry_cd,
+        p.flt_cnt,
+        p.fuel_type_cd,
+        p.fuel_wght,
+        p.co2_emsn,
+        p.use_bgng_dt,
+        p.use_end_dt,
+        p.frst_reg_dt,
+        p.frst_reg_user_id,
+        p.last_chg_dt,
+        p.last_chg_user_id
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         목록 조회 (pair_sn ASC, 유효구간 필터)
+         ════════════════════════════════════════════ -->
+    <select id="selectByErId"
+            resultType="kr.go.molit.icas.er.rprt.aerdrm.domain.ErAerdrmPairCo2VO">
+        SELECT <include refid="pairColumns"/>
+          FROM er.tn_er_aerdrm_pair_co2 p
+         WHERE p.er_id = #{erId}
+           AND NOW() BETWEEN p.use_bgng_dt AND p.use_end_dt
+         ORDER BY p.pair_sn ASC
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         단건 조회 (복합 PK)
+         ════════════════════════════════════════════ -->
+    <select id="selectOne"
+            resultType="kr.go.molit.icas.er.rprt.aerdrm.domain.ErAerdrmPairCo2VO">
+        SELECT <include refid="pairColumns"/>
+          FROM er.tn_er_aerdrm_pair_co2 p
+         WHERE p.er_id   = #{erId}
+           AND p.pair_sn = #{pairSn}
+           AND NOW() BETWEEN p.use_bgng_dt AND p.use_end_dt
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         다음 pair_sn 채번: max(pair_sn) + 1, 없으면 1
+         ════════════════════════════════════════════ -->
+    <select id="selectNextSn" resultType="int">
+        SELECT COALESCE(MAX(pair_sn), 0) + 1
+          FROM er.tn_er_aerdrm_pair_co2
+         WHERE er_id = #{erId}
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         중복 쌍 체크 (dprtr_aerdrm + arvl_aerdrm + fuel_type, 자신 제외)
+         excludeSn = -1 이면 자기 자신 제외 없음 (신규)
+         ════════════════════════════════════════════ -->
+    <select id="existsByAerdrmPair" resultType="boolean">
+        SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
+          FROM er.tn_er_aerdrm_pair_co2
+         WHERE er_id            = #{erId}
+           AND dprtr_aerdrm_cd  = #{dprtrAerdrmCd}
+           AND arvl_aerdrm_cd   = #{arvlAerdrmCd}
+           AND fuel_type_cd     = #{fuelTypeCd}
+           AND pair_sn         != #{excludeSn}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         er_id 기준 CO₂ 합계 (null → 0)
+         국가 쌍 ↔ 비행장 쌍 합계 일치 검증에 사용
+         ════════════════════════════════════════════ -->
+    <select id="sumCo2EmsnByEr" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(co2_emsn), 0)
+          FROM er.tn_er_aerdrm_pair_co2
+         WHERE er_id = #{erId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         신규 등록
+         ════════════════════════════════════════════ -->
+    <insert id="insert"
+            parameterType="kr.go.molit.icas.er.rprt.aerdrm.domain.ErAerdrmPairCo2VO">
+        INSERT INTO er.tn_er_aerdrm_pair_co2
+            (er_id, pair_sn,
+             dprtr_aerdrm_cd, arvl_aerdrm_cd,
+             dprtr_cntry_cd, arvl_cntry_cd,
+             flt_cnt, fuel_type_cd, fuel_wght, co2_emsn,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{erId}, #{pairSn},
+             #{dprtrAerdrmCd}, #{arvlAerdrmCd},
+             #{dprtrCntryCd}, #{arvlCntryCd},
+             #{fltCnt}, #{fuelTypeCd}, #{fuelWght}, #{co2Emsn},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- ════════════════════════════════════════════
+         수정 (유효구간 필터 포함)
+         ════════════════════════════════════════════ -->
+    <update id="update"
+            parameterType="kr.go.molit.icas.er.rprt.aerdrm.domain.ErAerdrmPairCo2VO">
+        UPDATE er.tn_er_aerdrm_pair_co2
+           SET dprtr_aerdrm_cd  = #{dprtrAerdrmCd},
+               arvl_aerdrm_cd   = #{arvlAerdrmCd},
+               dprtr_cntry_cd   = #{dprtrCntryCd},
+               arvl_cntry_cd    = #{arvlCntryCd},
+               flt_cnt          = #{fltCnt},
+               fuel_type_cd     = #{fuelTypeCd},
+               fuel_wght        = #{fuelWght},
+               co2_emsn         = #{co2Emsn},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE er_id   = #{erId}
+           AND pair_sn = #{pairSn}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         소프트삭제: use_end_dt = NOW() - 1분
+         ════════════════════════════════════════════ -->
+    <update id="softDelete">
+        UPDATE er.tn_er_aerdrm_pair_co2
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE er_id   = #{erId}
+           AND pair_sn = #{pairSn}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         신버전 복사: src → dst (INSERT ... SELECT)
+         ════════════════════════════════════════════ -->
+    <insert id="copyToNewEr">
+        INSERT INTO er.tn_er_aerdrm_pair_co2
+            (er_id, pair_sn,
+             dprtr_aerdrm_cd, arvl_aerdrm_cd,
+             dprtr_cntry_cd, arvl_cntry_cd,
+             flt_cnt, fuel_type_cd, fuel_wght, co2_emsn,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        SELECT #{dstErId}, pair_sn,
+               dprtr_aerdrm_cd, arvl_aerdrm_cd,
+               dprtr_cntry_cd, arvl_cntry_cd,
+               flt_cnt, fuel_type_cd, fuel_wght, co2_emsn,
+               NOW(), '9999-12-31 23:59:59',
+               NOW(), #{userId},
+               NOW(), #{userId}
+          FROM er.tn_er_aerdrm_pair_co2
+         WHERE er_id = #{srcErId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </insert>
+
+</mapper>

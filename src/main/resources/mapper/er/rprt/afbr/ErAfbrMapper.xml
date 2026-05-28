@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.rprt.afbr.ErAfbrMapper">
+
+    <!-- ════════════════════════════════════════════
+         공통 컬럼 목록
+         ════════════════════════════════════════════ -->
+    <sql id="afbrColumns">
+        a.er_id,
+        a.acft_type_cd,
+        a.afbr_val,
+        a.afbr_unit,
+        a.use_bgng_dt,
+        a.use_end_dt,
+        a.frst_reg_dt,
+        a.frst_reg_user_id,
+        a.last_chg_dt,
+        a.last_chg_user_id
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         목록 조회 (acft_type_cd ASC, 유효구간 필터)
+         ════════════════════════════════════════════ -->
+    <select id="selectByErId"
+            resultType="kr.go.molit.icas.er.rprt.afbr.domain.ErAfbrVO">
+        SELECT <include refid="afbrColumns"/>
+          FROM er.tn_er_afbr a
+         WHERE a.er_id = #{erId}
+           AND NOW() BETWEEN a.use_bgng_dt AND a.use_end_dt
+         ORDER BY a.acft_type_cd ASC
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         단건 조회 (자연키 PK)
+         ════════════════════════════════════════════ -->
+    <select id="selectOne"
+            resultType="kr.go.molit.icas.er.rprt.afbr.domain.ErAfbrVO">
+        SELECT <include refid="afbrColumns"/>
+          FROM er.tn_er_afbr a
+         WHERE a.er_id        = #{erId}
+           AND a.acft_type_cd = #{acftTypeCd}
+           AND NOW() BETWEEN a.use_bgng_dt AND a.use_end_dt
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         PK 존재 여부 확인 (upsert 분기용)
+         ════════════════════════════════════════════ -->
+    <select id="existsByPk" resultType="boolean">
+        SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
+          FROM er.tn_er_afbr
+         WHERE er_id        = #{erId}
+           AND acft_type_cd = #{acftTypeCd}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         신규 등록
+         ════════════════════════════════════════════ -->
+    <insert id="insertAfbr"
+            parameterType="kr.go.molit.icas.er.rprt.afbr.domain.ErAfbrVO">
+        INSERT INTO er.tn_er_afbr
+            (er_id, acft_type_cd, afbr_val, afbr_unit,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{erId}, #{acftTypeCd}, #{afbrVal}, #{afbrUnit},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- ════════════════════════════════════════════
+         수정 (유효구간 필터 포함)
+         ════════════════════════════════════════════ -->
+    <update id="updateAfbr"
+            parameterType="kr.go.molit.icas.er.rprt.afbr.domain.ErAfbrVO">
+        UPDATE er.tn_er_afbr
+           SET afbr_val         = #{afbrVal},
+               afbr_unit        = #{afbrUnit},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE er_id        = #{erId}
+           AND acft_type_cd = #{acftTypeCd}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         소프트삭제: use_end_dt = NOW() - 1분
+         ════════════════════════════════════════════ -->
+    <update id="softDeleteOne">
+        UPDATE er.tn_er_afbr
+           SET use_end_dt        = NOW() - INTERVAL '1 minute',
+               last_chg_dt       = NOW(),
+               last_chg_user_id  = #{userId}
+         WHERE er_id        = #{erId}
+           AND acft_type_cd = #{acftTypeCd}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         신버전 ER 복사: src → dst (INSERT ... SELECT)
+         ════════════════════════════════════════════ -->
+    <insert id="copyToNewEr">
+        INSERT INTO er.tn_er_afbr
+            (er_id, acft_type_cd, afbr_val, afbr_unit,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        SELECT #{dstErId}, acft_type_cd, afbr_val, afbr_unit,
+               NOW(), '9999-12-31 23:59:59',
+               NOW(), #{userId},
+               NOW(), #{userId}
+          FROM er.tn_er_afbr
+         WHERE er_id = #{srcErId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </insert>
+
+</mapper>

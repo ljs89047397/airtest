@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.ptl.stat.PtlStatYearlyMapper">
+
+    <!-- ════════════════════════════════════════════
+         공통 컬럼 (단건 / 운영사 추이 조회용)
+         ════════════════════════════════════════════ -->
+    <sql id="baseColumns">
+        s.rprt_yr,
+        s.oprtr_id,
+        s.ttl_co2_emsn,
+        s.ttl_ofst_req,
+        s.ttl_cef_redu,
+        s.ttl_flt_cnt,
+        s.ttl_fuel_wght,
+        s.ttl_saf_qty,
+        s.data_gap_cnt,
+        s.last_aggr_dt
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         운영사 명칭 포함 컬럼 (연도별 목록 조회용)
+         ════════════════════════════════════════════ -->
+    <sql id="joinColumns">
+        s.rprt_yr,
+        s.oprtr_id,
+        o.oprtr_nm,
+        o.icao_desig,
+        s.ttl_co2_emsn,
+        s.ttl_ofst_req,
+        s.ttl_cef_redu,
+        s.ttl_flt_cnt,
+        s.ttl_fuel_wght,
+        s.ttl_saf_qty,
+        s.data_gap_cnt,
+        s.last_aggr_dt
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         PK 단건 조회
+         ════════════════════════════════════════════ -->
+    <select id="selectByPk" resultType="kr.go.molit.icas.ptl.stat.PtlStatYearlyVO">
+        SELECT <include refid="baseColumns"/>
+          FROM ptl.tn_ptl_stat_yearly s
+         WHERE s.rprt_yr  = #{rprtYr}
+           AND s.oprtr_id = #{oprtrId}
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         연도별 전 운영사 목록 (oprtr_nm, icao_desig JOIN)
+         ════════════════════════════════════════════ -->
+    <select id="selectByRprtYr" resultType="kr.go.molit.icas.ptl.stat.PtlStatYearlyVO">
+        SELECT <include refid="joinColumns"/>
+          FROM ptl.tn_ptl_stat_yearly s
+          JOIN com.tn_oprtr o ON o.oprtr_id = s.oprtr_id
+                              AND o.use_end_dt > NOW()
+         WHERE s.rprt_yr = #{rprtYr}
+         ORDER BY o.icao_desig
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         특정 운영사 다년 추이
+         ════════════════════════════════════════════ -->
+    <select id="selectByOprtr" resultType="kr.go.molit.icas.ptl.stat.PtlStatYearlyVO">
+        SELECT <include refid="baseColumns"/>
+          FROM ptl.tn_ptl_stat_yearly s
+         WHERE s.oprtr_id = #{oprtrId}
+         ORDER BY s.rprt_yr DESC
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         배치 UPSERT
+         없으면 INSERT, 있으면 UPDATE
+         ════════════════════════════════════════════ -->
+    <insert id="upsertStat" parameterType="kr.go.molit.icas.ptl.stat.PtlStatYearlyVO">
+        INSERT INTO ptl.tn_ptl_stat_yearly (
+            rprt_yr,
+            oprtr_id,
+            ttl_co2_emsn,
+            ttl_ofst_req,
+            ttl_cef_redu,
+            ttl_flt_cnt,
+            ttl_fuel_wght,
+            ttl_saf_qty,
+            data_gap_cnt,
+            last_aggr_dt
+        ) VALUES (
+            #{rprtYr},
+            #{oprtrId},
+            #{ttlCo2Emsn},
+            #{ttlOfstReq},
+            #{ttlCefRedu},
+            #{ttlFltCnt},
+            #{ttlFuelWght},
+            #{ttlSafQty},
+            #{dataGapCnt},
+            NOW()
+        )
+        ON CONFLICT (rprt_yr, oprtr_id) DO UPDATE SET
+            ttl_co2_emsn  = EXCLUDED.ttl_co2_emsn,
+            ttl_ofst_req  = EXCLUDED.ttl_ofst_req,
+            ttl_cef_redu  = EXCLUDED.ttl_cef_redu,
+            ttl_flt_cnt   = EXCLUDED.ttl_flt_cnt,
+            ttl_fuel_wght = EXCLUDED.ttl_fuel_wght,
+            ttl_saf_qty   = EXCLUDED.ttl_saf_qty,
+            data_gap_cnt  = EXCLUDED.data_gap_cnt,
+            last_aggr_dt  = NOW()
+    </insert>
+
+</mapper>

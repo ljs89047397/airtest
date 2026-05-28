@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.com.authrt.AuthrtMapper">
+
+    <select id="selectAuthrts" resultType="kr.go.molit.icas.com.authrt.domain.AuthrtVO">
+        SELECT authrt_id,
+               authrt_nm,
+               authrt_desc,
+               use_bgng_dt,
+               use_end_dt,
+               frst_reg_dt,
+               frst_reg_user_id,
+               last_chg_dt,
+               last_chg_user_id
+          FROM com.tn_sys_authrt
+         WHERE NOW() BETWEEN use_bgng_dt AND use_end_dt
+         ORDER BY authrt_id
+    </select>
+
+    <select id="selectAuthrt" resultType="kr.go.molit.icas.com.authrt.domain.AuthrtVO">
+        SELECT authrt_id,
+               authrt_nm,
+               authrt_desc,
+               use_bgng_dt,
+               use_end_dt,
+               frst_reg_dt,
+               frst_reg_user_id,
+               last_chg_dt,
+               last_chg_user_id
+          FROM com.tn_sys_authrt
+         WHERE authrt_id = #{authrtId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- 유효·만료 포함 전체에서 중복 체크 -->
+    <select id="existsAuthrtId" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1
+              FROM com.tn_sys_authrt
+             WHERE authrt_id = #{authrtId}
+        )
+    </select>
+
+    <insert id="insertAuthrt" parameterType="kr.go.molit.icas.com.authrt.domain.AuthrtVO">
+        INSERT INTO com.tn_sys_authrt
+            (authrt_id, authrt_nm, authrt_desc,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{authrtId}, #{authrtNm}, #{authrtDesc},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <update id="updateAuthrt" parameterType="kr.go.molit.icas.com.authrt.domain.AuthrtVO">
+        UPDATE com.tn_sys_authrt
+           SET authrt_nm        = #{authrtNm},
+               authrt_desc      = #{authrtDesc},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE authrt_id = #{authrtId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <update id="softDeleteAuthrt">
+        UPDATE com.tn_sys_authrt
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE authrt_id = #{authrtId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

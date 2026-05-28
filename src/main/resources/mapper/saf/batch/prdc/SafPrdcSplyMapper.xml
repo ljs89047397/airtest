@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.saf.batch.prdc.SafPrdcSplyMapper">
+
+    <select id="selectByBatchId" resultType="kr.go.molit.icas.saf.batch.prdc.domain.SafPrdcSplyVO">
+        SELECT * FROM saf.tn_saf_prdc_sply WHERE batch_id = #{batchId}
+    </select>
+
+    <insert id="insertPrdc">
+        INSERT INTO saf.tn_saf_prdc_sply (
+            batch_id, prdc_co_info, prdc_pos_batch_id, prdc_pos_isue_dt,
+            orgn_saf_qty, saf_prdc_dt, acqstn_dt, prdc_lc_addr, sply_co_info,
+            frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+        ) VALUES (
+            #{batchId}, #{prdcCoInfo}, #{prdcPosBatchId}, #{prdcPosIsueDt},
+            #{orgnSafQty}, #{safPrdcDt}, #{acqstnDt}, #{prdcLcAddr}, #{splyCoInfo},
+            NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId}
+        )
+    </insert>
+
+    <update id="updatePrdc">
+        UPDATE saf.tn_saf_prdc_sply
+        SET prdc_co_info      = #{prdcCoInfo},
+            prdc_pos_batch_id = #{prdcPosBatchId},
+            prdc_pos_isue_dt  = #{prdcPosIsueDt},
+            orgn_saf_qty      = #{orgnSafQty},
+            saf_prdc_dt       = #{safPrdcDt},
+            acqstn_dt         = #{acqstnDt},
+            prdc_lc_addr      = #{prdcLcAddr},
+            sply_co_info      = #{splyCoInfo},
+            last_chg_dt       = NOW(),
+            last_chg_user_id  = #{lastChgUserId}
+        WHERE batch_id = #{batchId}
+    </update>
+
+    <delete id="deleteByBatchId">
+        DELETE FROM saf.tn_saf_prdc_sply WHERE batch_id = #{batchId}
+    </delete>
+
+</mapper>

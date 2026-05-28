@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.vr.scope.VrScopeMapper">
+
+    <select id="selectByVrId" resultType="kr.go.molit.icas.vr.scope.domain.VrScopeVO">
+        SELECT * FROM vr.tn_vr_scope WHERE vr_id = #{vrId}
+    </select>
+
+    <insert id="insertScope">
+        INSERT INTO vr.tn_vr_scope (
+            vr_id, vrfcn_inst_nm, vrfcn_inst_addr, vrfcn_scope_cn,
+            vrfcn_strt_dt, vrfcn_end_dt,
+            frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+        ) VALUES (
+            #{vrId}, #{vrfcnInstNm}, #{vrfcnInstAddr}, #{vrfcnScopeCn},
+            #{vrfcnStrtDt}, #{vrfcnEndDt},
+            NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId}
+        )
+    </insert>
+
+    <update id="updateScope">
+        UPDATE vr.tn_vr_scope
+        SET vrfcn_inst_nm    = #{vrfcnInstNm},
+            vrfcn_inst_addr  = #{vrfcnInstAddr},
+            vrfcn_scope_cn   = #{vrfcnScopeCn},
+            vrfcn_strt_dt    = #{vrfcnStrtDt},
+            vrfcn_end_dt     = #{vrfcnEndDt},
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{lastChgUserId}
+        WHERE vr_id = #{vrId}
+    </update>
+
+    <delete id="deleteByVrId">
+        DELETE FROM vr.tn_vr_scope WHERE vr_id = #{vrId}
+    </delete>
+
+</mapper>

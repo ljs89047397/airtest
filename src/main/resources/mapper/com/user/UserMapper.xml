@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.com.user.UserMapper">
+
+    <!-- 공통 컬럼 목록 -->
+    <sql id="userColumns">
+        u.user_id,
+        u.user_nm,
+        u.ognz_id,
+        o.ognz_se_cd,
+        u.eml_addr,
+        u.mblphn_no,
+        u.tlphn_no,
+        u.pswd_chg_dt,
+        u.pswd_fail_cnt,
+        u.acnt_lock_yn,
+        u.last_logn_dt,
+        u.master_yn,
+        u.use_bgng_dt,
+        u.use_end_dt,
+        u.frst_reg_dt,
+        u.frst_reg_user_id,
+        u.last_chg_dt,
+        u.last_chg_user_id
+    </sql>
+
+    <!-- FROM + JOIN (유효구간 양쪽 필터) -->
+    <sql id="userFromJoin">
+        FROM com.tn_user u
+        JOIN com.tn_ognz o ON o.ognz_id = u.ognz_id
+                           AND NOW() BETWEEN o.use_bgng_dt AND o.use_end_dt
+       WHERE NOW() BETWEEN u.use_bgng_dt AND u.use_end_dt
+    </sql>
+
+    <!-- 동적 검색 WHERE 절 (검색 조건 추가분) -->
+    <sql id="userSearchConditions">
+        <if test="ognzId != null and ognzId != ''">
+            AND u.ognz_id = #{ognzId}
+        </if>
+        <if test="ognzSeCd != null and ognzSeCd != ''">
+            AND o.ognz_se_cd = #{ognzSeCd}
+        </if>
+        <if test="userIdLike != null and userIdLike != ''">
+            AND u.user_id LIKE '%' || #{userIdLike} || '%'
+        </if>
+        <if test="userNmLike != null and userNmLike != ''">
+            AND u.user_nm LIKE '%' || #{userNmLike} || '%'
+        </if>
+        <if test="acntLockYn != null and acntLockYn != ''">
+            AND u.acnt_lock_yn = #{acntLockYn}
+        </if>
+    </sql>
+
+    <!-- 사용자 목록 조회 (검색 + 페이징) -->
+    <select id="selectUsers" parameterType="kr.go.molit.icas.com.user.domain.UserSearch"
+            resultType="kr.go.molit.icas.com.user.domain.UserVO">
+        SELECT <include refid="userColumns"/>
+        <include refid="userFromJoin"/>
+        <include refid="userSearchConditions"/>
+         ORDER BY u.ognz_id, u.user_id
+         LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <!-- 총 건수 (페이징용) -->
+    <select id="countUsers" parameterType="kr.go.molit.icas.com.user.domain.UserSearch"
+            resultType="long">
+        SELECT COUNT(*)
+        <include refid="userFromJoin"/>
+        <include refid="userSearchConditions"/>
+    </select>
+
+    <!-- 단건 조회 (ognz_se_cd JOIN 포함) -->
+    <select id="selectByUserId" resultType="kr.go.molit.icas.com.user.domain.UserVO">
+        SELECT <include refid="userColumns"/>
+        <include refid="userFromJoin"/>
+           AND u.user_id = #{userId}
+    </select>
+
+    <!-- 사용자 등록 -->
+    <insert id="insertUser" parameterType="kr.go.molit.icas.com.user.domain.UserVO">
+        INSERT INTO com.tn_user
+            (user_id, user_nm, pswd_hash, ognz_id,
+             eml_addr, mblphn_no, tlphn_no,
+             pswd_chg_dt, pswd_fail_cnt, acnt_lock_yn, master_yn,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{userId}, #{userNm}, #{pswdHash}, #{ognzId},
+             #{emlAddr}, #{mblphnNo}, #{tlphnNo},
+             NULL, 0, 'N', #{masterYn},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- 기본정보 수정 (비밀번호 제외, 유효구간 필터 포함) -->
+    <update id="updateUser" parameterType="kr.go.molit.icas.com.user.domain.UserVO">
+        UPDATE com.tn_user
+           SET user_nm          = #{userNm},
+               ognz_id          = #{ognzId},
+               eml_addr         = #{emlAddr},
+               mblphn_no        = #{mblphnNo},
+               tlphn_no         = #{tlphnNo},
+               master_yn        = #{masterYn},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE user_id = #{userId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- 소프트 삭제 -->
+    <update id="softDeleteUser">
+        UPDATE com.tn_user
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{operatorId}
+         WHERE user_id = #{userId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- 비밀번호 변경: pswd_chg_dt, pswd_fail_cnt, acnt_lock_yn 동시 갱신 -->
+    <update id="changePassword">
+        UPDATE com.tn_user
+           SET pswd_hash        = #{pswdHash},
+               pswd_chg_dt      = NOW(),
+               pswd_fail_cnt    = 0,
+               acnt_lock_yn     = 'N',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{operatorId}
+         WHERE user_id = #{userId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- 계정 잠금 해제 -->
+    <update id="unlockAccount">
+        UPDATE com.tn_user
+           SET acnt_lock_yn     = 'N',
+               pswd_fail_cnt    = 0,
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{operatorId}
+         WHERE user_id = #{userId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

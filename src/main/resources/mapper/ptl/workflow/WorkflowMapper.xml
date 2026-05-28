@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.ptl.workflow.WorkflowMapper">
+
+    <!-- ════════════════════════════════════════════
+         운영사별 전 도메인 최신 상태 매트릭스 조회.
+         com.tn_oprtr 기준, 각 도메인은 서브쿼리로 최신 1건 추출.
+         null 상태 코드 = 해당 연도 미작성.
+         ════════════════════════════════════════════ -->
+    <select id="selectWorkflow"
+            parameterType="kr.go.molit.icas.ptl.workflow.domain.WorkflowSearch"
+            resultType="kr.go.molit.icas.ptl.workflow.domain.WorkflowRowVO">
+        SELECT
+            o.oprtr_id,
+            o.oprtr_nm,
+            o.icao_desig,
+            #{rprtYr} AS rprt_yr,
+
+            /* ── EMP ── */
+            (SELECT ep.emp_st_cd
+               FROM emp.tn_emp_plan ep
+              WHERE ep.oprtr_id  = o.oprtr_id
+                AND ep.rprt_yr   = #{rprtYr}
+                AND ep.use_end_dt > NOW()
+              ORDER BY ep.frst_reg_dt DESC
+              LIMIT 1) AS emp_st_cd,
+
+            (SELECT ep.emp_plan_id
+               FROM emp.tn_emp_plan ep
+              WHERE ep.oprtr_id  = o.oprtr_id
+                AND ep.rprt_yr   = #{rprtYr}
+                AND ep.use_end_dt > NOW()
+              ORDER BY ep.frst_reg_dt DESC
+              LIMIT 1) AS emp_plan_id,
+
+            /* ── ER ── */
+            (SELECT er.er_st_cd
+               FROM er.tn_er er
+              WHERE er.oprtr_id  = o.oprtr_id
+                AND er.rprt_yr   = #{rprtYr}
+                AND er.use_end_dt > NOW()
+              ORDER BY er.frst_reg_dt DESC
+              LIMIT 1) AS er_st_cd,
+
+            (SELECT er.er_id
+               FROM er.tn_er er
+              WHERE er.oprtr_id  = o.oprtr_id
+                AND er.rprt_yr   = #{rprtYr}
+                AND er.use_end_dt > NOW()
+              ORDER BY er.frst_reg_dt DESC
+              LIMIT 1) AS er_id,
+
+            /* ── CEF ── */
+            (SELECT c.cef_st_cd
+               FROM er.tn_cef c
+              WHERE c.oprtr_id  = o.oprtr_id
+                AND c.rprt_yr   = #{rprtYr}
+                AND c.use_end_dt > NOW()
+              ORDER BY c.frst_reg_dt DESC
+              LIMIT 1) AS cef_st_cd,
+
+            (SELECT c.cef_id
+               FROM er.tn_cef c
+              WHERE c.oprtr_id  = o.oprtr_id
+                AND c.rprt_yr   = #{rprtYr}
+                AND c.use_end_dt > NOW()
+              ORDER BY c.frst_reg_dt DESC
+              LIMIT 1) AS cef_id,
+
+            /* ── EUCR ── */
+            (SELECT eu.eucr_st_cd
+               FROM er.tn_eucr eu
+              WHERE eu.oprtr_id  = o.oprtr_id
+                AND eu.rprt_yr   = #{rprtYr}
+                AND eu.use_end_dt > NOW()
+              ORDER BY eu.frst_reg_dt DESC
+              LIMIT 1) AS eucr_st_cd,
+
+            (SELECT eu.eucr_id
+               FROM er.tn_eucr eu
+              WHERE eu.oprtr_id  = o.oprtr_id
+                AND eu.rprt_yr   = #{rprtYr}
+                AND eu.use_end_dt > NOW()
+              ORDER BY eu.frst_reg_dt DESC
+              LIMIT 1) AS eucr_id,
+
+            /* ── VR ── */
+            (SELECT vr.vr_st_cd
+               FROM vr.tn_vr vr
+              WHERE vr.oprtr_id  = o.oprtr_id
+                AND vr.rprt_yr   = #{rprtYr}
+                AND vr.use_end_dt > NOW()
+              ORDER BY vr.frst_reg_dt DESC
+              LIMIT 1) AS vr_st_cd,
+
+            (SELECT vr.vr_id
+               FROM vr.tn_vr vr
+              WHERE vr.oprtr_id  = o.oprtr_id
+                AND vr.rprt_yr   = #{rprtYr}
+                AND vr.use_end_dt > NOW()
+              ORDER BY vr.frst_reg_dt DESC
+              LIMIT 1) AS vr_id,
+
+            /* ── OoM ── */
+            (SELECT oom.oom_st_cd
+               FROM er.tn_oom_check oom
+              WHERE oom.oprtr_id  = o.oprtr_id
+                AND oom.rprt_yr   = #{rprtYr}
+                AND oom.use_end_dt > NOW()
+              ORDER BY oom.frst_reg_dt DESC
+              LIMIT 1) AS oom_st_cd,
+
+            (SELECT oom.oom_id
+               FROM er.tn_oom_check oom
+              WHERE oom.oprtr_id  = o.oprtr_id
+                AND oom.rprt_yr   = #{rprtYr}
+                AND oom.use_end_dt > NOW()
+              ORDER BY oom.frst_reg_dt DESC
+              LIMIT 1) AS oom_id
+
+          FROM com.tn_oprtr o
+         WHERE o.use_end_dt > NOW()
+        <if test="oprtrId != null and oprtrId != ''">
+           AND o.oprtr_id = #{oprtrId}
+        </if>
+         ORDER BY o.icao_desig
+    </select>
+
+</mapper>

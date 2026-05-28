@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.com.vrfcn.VrfcnInstMapper">
+
+    <!-- 유효한 검증기관 전체 조회 -->
+    <select id="selectAll" resultType="kr.go.molit.icas.com.vrfcn.domain.VrfcnInstVO">
+        SELECT vrfcn_inst_id,
+               ognz_id,
+               vrfcn_inst_nm,
+               vrfcn_inst_nm_en,
+               addr,
+               icao_ccr_accrd_yn,
+               icao_ccr_accrd_no,
+               icao_ccr_accrd_xpr_dt,
+               use_bgng_dt,
+               use_end_dt,
+               frst_reg_dt,
+               frst_reg_user_id,
+               last_chg_dt,
+               last_chg_user_id
+          FROM com.tn_vrfcn_inst
+         WHERE NOW() BETWEEN use_bgng_dt AND use_end_dt
+         ORDER BY vrfcn_inst_nm
+    </select>
+
+    <!-- 단건 조회 (유효구간 필터 포함) -->
+    <select id="selectByVrfcnInstId" resultType="kr.go.molit.icas.com.vrfcn.domain.VrfcnInstVO">
+        SELECT vrfcn_inst_id,
+               ognz_id,
+               vrfcn_inst_nm,
+               vrfcn_inst_nm_en,
+               addr,
+               icao_ccr_accrd_yn,
+               icao_ccr_accrd_no,
+               icao_ccr_accrd_xpr_dt,
+               use_bgng_dt,
+               use_end_dt,
+               frst_reg_dt,
+               frst_reg_user_id,
+               last_chg_dt,
+               last_chg_user_id
+          FROM com.tn_vrfcn_inst
+         WHERE vrfcn_inst_id = #{vrfcnInstId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- 검증기관 등록 -->
+    <insert id="insertVrfcnInst" parameterType="kr.go.molit.icas.com.vrfcn.domain.VrfcnInstVO">
+        INSERT INTO com.tn_vrfcn_inst
+            (vrfcn_inst_id, ognz_id, vrfcn_inst_nm, vrfcn_inst_nm_en,
+             addr, icao_ccr_accrd_yn, icao_ccr_accrd_no, icao_ccr_accrd_xpr_dt,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{vrfcnInstId}, #{ognzId}, #{vrfcnInstNm}, #{vrfcnInstNmEn},
+             #{addr}, #{icaoCcrAccrdYn}, #{icaoCcrAccrdNo}, #{icaoCcrAccrdXprDt},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- 검증기관 수정 (유효구간 필터 포함) -->
+    <update id="updateVrfcnInst" parameterType="kr.go.molit.icas.com.vrfcn.domain.VrfcnInstVO">
+        UPDATE com.tn_vrfcn_inst
+           SET ognz_id               = #{ognzId},
+               vrfcn_inst_nm         = #{vrfcnInstNm},
+               vrfcn_inst_nm_en      = #{vrfcnInstNmEn},
+               addr                  = #{addr},
+               icao_ccr_accrd_yn     = #{icaoCcrAccrdYn},
+               icao_ccr_accrd_no     = #{icaoCcrAccrdNo},
+               icao_ccr_accrd_xpr_dt = #{icaoCcrAccrdXprDt},
+               last_chg_dt           = NOW(),
+               last_chg_user_id      = #{lastChgUserId}
+         WHERE vrfcn_inst_id = #{vrfcnInstId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- 소프트삭제: use_end_dt = NOW() - 1 minute -->
+    <update id="softDeleteVrfcnInst">
+        UPDATE com.tn_vrfcn_inst
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE vrfcn_inst_id = #{vrfcnInstId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- 채번용: prefix 이후 숫자 부분의 MAX 반환. 없으면 0 -->
+    <select id="countByPrefix" resultType="int">
+        SELECT COALESCE(
+                   MAX(CAST(SUBSTRING(vrfcn_inst_id, LENGTH(#{prefix}) + 1) AS INTEGER)),
+                   0
+               )
+          FROM com.tn_vrfcn_inst
+         WHERE vrfcn_inst_id LIKE #{prefix} || '%'
+           AND SUBSTRING(vrfcn_inst_id, LENGTH(#{prefix}) + 1) ~ '^[0-9]+$'
+    </select>
+
+</mapper>

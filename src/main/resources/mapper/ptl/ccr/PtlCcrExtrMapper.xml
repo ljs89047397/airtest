@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.ptl.ccr.PtlCcrExtrMapper">
+
+    <!-- ════════════════════════════════════════════
+         공통 컬럼
+         ════════════════════════════════════════════ -->
+    <sql id="baseColumns">
+        extr_id,
+        rprt_yr,
+        extr_scope_cd,
+        extr_st_cd,
+        file_id,
+        extr_user_id,
+        extr_dt,
+        rmrk,
+        use_bgng_dt,
+        use_end_dt,
+        frst_reg_dt,
+        frst_reg_user_id,
+        last_chg_dt,
+        last_chg_user_id
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         단건 조회
+         ════════════════════════════════════════════ -->
+    <select id="selectByExtrId" resultType="kr.go.molit.icas.ptl.ccr.domain.PtlCcrExtrVO">
+        SELECT <include refid="baseColumns"/>
+          FROM ptl.tn_ptl_ccr_extr
+         WHERE extr_id    = #{extrId}
+           AND use_end_dt > NOW()
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         동적 검색 조건
+         ════════════════════════════════════════════ -->
+    <sql id="searchConditions">
+        <if test="rprtYr != null and rprtYr != ''">
+            AND rprt_yr = #{rprtYr}
+        </if>
+        <if test="extrStCd != null and extrStCd != ''">
+            AND extr_st_cd = #{extrStCd}
+        </if>
+        <if test="extrUserId != null and extrUserId != ''">
+            AND extr_user_id = #{extrUserId}
+        </if>
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         목록 조회 (검색 + 페이징)
+         ════════════════════════════════════════════ -->
+    <select id="selectExtrs"
+            parameterType="kr.go.molit.icas.ptl.ccr.domain.PtlCcrExtrSearch"
+            resultType="kr.go.molit.icas.ptl.ccr.domain.PtlCcrExtrVO">
+        SELECT <include refid="baseColumns"/>
+          FROM ptl.tn_ptl_ccr_extr
+         WHERE use_end_dt > NOW()
+        <include refid="searchConditions"/>
+         ORDER BY extr_dt DESC
+         LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         총 건수 (페이징용)
+         ════════════════════════════════════════════ -->
+    <select id="countExtrs"
+            parameterType="kr.go.molit.icas.ptl.ccr.domain.PtlCcrExtrSearch"
+            resultType="int">
+        SELECT COUNT(*)
+          FROM ptl.tn_ptl_ccr_extr
+         WHERE use_end_dt > NOW()
+        <include refid="searchConditions"/>
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         채번: CE prefix 최대 순번 + 1
+         ════════════════════════════════════════════ -->
+    <select id="countByPrefix" resultType="int">
+        SELECT COALESCE(MAX(SUBSTRING(extr_id, 3)::int), 0) + 1
+          FROM ptl.tn_ptl_ccr_extr
+         WHERE extr_id LIKE 'CE%'
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         신규 추출 이력 등록
+         ════════════════════════════════════════════ -->
+    <insert id="insertExtr" parameterType="kr.go.molit.icas.ptl.ccr.domain.PtlCcrExtrVO">
+        INSERT INTO ptl.tn_ptl_ccr_extr (
+            extr_id,
+            rprt_yr,
+            extr_scope_cd,
+            extr_st_cd,
+            file_id,
+            extr_user_id,
+            extr_dt,
+            rmrk,
+            use_bgng_dt,
+            use_end_dt,
+            frst_reg_dt,
+            frst_reg_user_id,
+            last_chg_dt,
+            last_chg_user_id
+        ) VALUES (
+            #{extrId},
+            #{rprtYr},
+            #{extrScopeCd},
+            COALESCE(#{extrStCd}, 'INPRG'),
+            #{fileId},
+            #{extrUserId},
+            NOW(),
+            #{rmrk},
+            NOW(),
+            '9999-12-31 23:59:59',
+            NOW(),
+            #{frstRegUserId},
+            NOW(),
+            #{lastChgUserId}
+        )
+    </insert>
+
+    <!-- ════════════════════════════════════════════
+         상태 및 파일 ID 갱신
+         ════════════════════════════════════════════ -->
+    <update id="updateStatus">
+        UPDATE ptl.tn_ptl_ccr_extr
+           SET extr_st_cd       = #{extrStCd},
+               file_id          = #{fileId},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE extr_id    = #{extrId}
+           AND use_end_dt > NOW()
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         소프트 삭제
+         ════════════════════════════════════════════ -->
+    <update id="softDeleteExtr">
+        UPDATE ptl.tn_ptl_ccr_extr
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE extr_id    = #{extrId}
+           AND use_end_dt > NOW()
+    </update>
+
+</mapper>

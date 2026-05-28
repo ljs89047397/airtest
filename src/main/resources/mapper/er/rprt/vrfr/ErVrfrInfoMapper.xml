@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.er.rprt.vrfr.ErVrfrInfoMapper">
+
+    <!-- ════════════════════════════════════════════
+         공통 컬럼 목록
+         ════════════════════════════════════════════ -->
+    <sql id="vrfrColumns">
+        v.er_id,
+        v.vrfr_sn,
+        v.vrfcn_inst_id,
+        v.cnct_desc,
+        v.accrd_dtl,
+        v.use_bgng_dt,
+        v.use_end_dt,
+        v.frst_reg_dt,
+        v.frst_reg_user_id,
+        v.last_chg_dt,
+        v.last_chg_user_id
+    </sql>
+
+    <!-- ════════════════════════════════════════════
+         목록 조회 (vrfr_sn ASC, 유효구간 필터)
+         ════════════════════════════════════════════ -->
+    <select id="selectByErId"
+            resultType="kr.go.molit.icas.er.rprt.vrfr.domain.ErVrfrInfoVO">
+        SELECT <include refid="vrfrColumns"/>
+          FROM er.tn_er_vrfr_info v
+         WHERE v.er_id = #{erId}
+           AND NOW() BETWEEN v.use_bgng_dt AND v.use_end_dt
+         ORDER BY v.vrfr_sn ASC
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         단건 조회 (복합 PK)
+         ════════════════════════════════════════════ -->
+    <select id="selectOne"
+            resultType="kr.go.molit.icas.er.rprt.vrfr.domain.ErVrfrInfoVO">
+        SELECT <include refid="vrfrColumns"/>
+          FROM er.tn_er_vrfr_info v
+         WHERE v.er_id   = #{erId}
+           AND v.vrfr_sn = #{vrfrSn}
+           AND NOW() BETWEEN v.use_bgng_dt AND v.use_end_dt
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         다음 vrfr_sn 채번: max(vrfr_sn) + 1, 없으면 1
+         ════════════════════════════════════════════ -->
+    <select id="selectNextSn" resultType="int">
+        SELECT COALESCE(MAX(vrfr_sn), 0) + 1
+          FROM er.tn_er_vrfr_info
+         WHERE er_id = #{erId}
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         중복 검증기관 체크 (같은 er_id + vrfcn_inst_id)
+         excludeSn 은 자기 자신 제외용 (신규 시 0 전달)
+         ════════════════════════════════════════════ -->
+    <select id="existsByVrfcnInst" resultType="boolean">
+        SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
+          FROM er.tn_er_vrfr_info
+         WHERE er_id        = #{erId}
+           AND vrfcn_inst_id = #{vrfcnInstId}
+           AND vrfr_sn      != #{excludeSn}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- ════════════════════════════════════════════
+         신규 등록
+         ════════════════════════════════════════════ -->
+    <insert id="insertVrfrInfo"
+            parameterType="kr.go.molit.icas.er.rprt.vrfr.domain.ErVrfrInfoVO">
+        INSERT INTO er.tn_er_vrfr_info
+            (er_id, vrfr_sn, vrfcn_inst_id, cnct_desc, accrd_dtl,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{erId}, #{vrfrSn}, #{vrfcnInstId}, #{cnctDesc}, #{accrdDtl},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- ════════════════════════════════════════════
+         수정 (유효구간 필터 포함)
+         ════════════════════════════════════════════ -->
+    <update id="updateVrfrInfo"
+            parameterType="kr.go.molit.icas.er.rprt.vrfr.domain.ErVrfrInfoVO">
+        UPDATE er.tn_er_vrfr_info
+           SET vrfcn_inst_id    = #{vrfcnInstId},
+               cnct_desc        = #{cnctDesc},
+               accrd_dtl        = #{accrdDtl},
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE er_id   = #{erId}
+           AND vrfr_sn = #{vrfrSn}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         소프트삭제: use_end_dt = NOW() - 1분
+         ════════════════════════════════════════════ -->
+    <update id="softDeleteOne">
+        UPDATE er.tn_er_vrfr_info
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE er_id   = #{erId}
+           AND vrfr_sn = #{vrfrSn}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- ════════════════════════════════════════════
+         신버전 복사: src → dst (INSERT ... SELECT)
+         ════════════════════════════════════════════ -->
+    <insert id="copyToNewEr">
+        INSERT INTO er.tn_er_vrfr_info
+            (er_id, vrfr_sn, vrfcn_inst_id, cnct_desc, accrd_dtl,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        SELECT #{dstErId}, vrfr_sn, vrfcn_inst_id, cnct_desc, accrd_dtl,
+               NOW(), '9999-12-31 23:59:59',
+               NOW(), #{userId},
+               NOW(), #{userId}
+          FROM er.tn_er_vrfr_info
+         WHERE er_id = #{srcErId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </insert>
+
+</mapper>

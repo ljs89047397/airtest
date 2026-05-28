@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.vr.inpt.VrInputInfoMapper">
+
+    <select id="selectByVrId" resultType="kr.go.molit.icas.vr.inpt.domain.VrInputInfoVO">
+        SELECT * FROM vr.tn_vr_input_info WHERE vr_id = #{vrId} ORDER BY input_sn
+    </select>
+
+    <select id="selectByPk" resultType="kr.go.molit.icas.vr.inpt.domain.VrInputInfoVO">
+        SELECT * FROM vr.tn_vr_input_info WHERE vr_id = #{vrId} AND input_sn = #{inputSn}
+    </select>
+
+    <select id="maxInputSn" resultType="int">
+        SELECT COALESCE(MAX(input_sn), 0) FROM vr.tn_vr_input_info WHERE vr_id = #{vrId}
+    </select>
+
+    <insert id="insertInputInfo">
+        INSERT INTO vr.tn_vr_input_info (
+            vr_id, input_sn, doc_nm, doc_se_cd, file_id,
+            frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+        ) VALUES (
+            #{vrId}, #{inputSn}, #{docNm}, #{docSeCd}, #{fileId},
+            NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId}
+        )
+    </insert>
+
+    <update id="updateInputInfo">
+        UPDATE vr.tn_vr_input_info
+        SET doc_nm           = #{docNm},
+            doc_se_cd        = #{docSeCd},
+            file_id          = #{fileId},
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{lastChgUserId}
+        WHERE vr_id = #{vrId} AND input_sn = #{inputSn}
+    </update>
+
+    <delete id="deleteByPk">
+        DELETE FROM vr.tn_vr_input_info WHERE vr_id = #{vrId} AND input_sn = #{inputSn}
+    </delete>
+
+    <delete id="deleteByVrId">
+        DELETE FROM vr.tn_vr_input_info WHERE vr_id = #{vrId}
+    </delete>
+
+</mapper>

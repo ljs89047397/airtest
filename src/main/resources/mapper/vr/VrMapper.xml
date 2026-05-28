@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.vr.VrMapper">
+
+    <select id="selectByVrId" resultType="kr.go.molit.icas.vr.domain.VrVO">
+        SELECT *
+        FROM vr.tn_vr
+        WHERE vr_id = #{vrId}
+          AND use_end_dt > NOW()
+    </select>
+
+    <select id="selectByUk" resultType="kr.go.molit.icas.vr.domain.VrVO">
+        SELECT *
+        FROM vr.tn_vr
+        WHERE oprtr_id   = #{oprtrId}
+          AND rprt_yr    = #{rprtYr}
+          AND vr_type_cd = #{vrTypeCd}
+          AND vr_ver     = #{vrVer}
+          AND use_end_dt > NOW()
+    </select>
+
+    <select id="selectLatest" resultType="kr.go.molit.icas.vr.domain.VrVO">
+        SELECT *
+        FROM vr.tn_vr
+        WHERE oprtr_id   = #{oprtrId}
+          AND rprt_yr    = #{rprtYr}
+          AND vr_type_cd = #{vrTypeCd}
+          AND use_end_dt > NOW()
+        ORDER BY vr_ver DESC
+        LIMIT 1
+    </select>
+
+    <select id="countVrs" resultType="long">
+        SELECT COUNT(*)
+        FROM vr.tn_vr
+        WHERE use_end_dt > NOW()
+        <if test="oprtrId != null and oprtrId != ''">
+            AND oprtr_id = #{oprtrId}
+        </if>
+        <if test="rprtYr != null and rprtYr != ''">
+            AND rprt_yr = #{rprtYr}
+        </if>
+        <if test="vrTypeCd != null and vrTypeCd != ''">
+            AND vr_type_cd = #{vrTypeCd}
+        </if>
+        <if test="vrStCd != null and vrStCd != ''">
+            AND vr_st_cd = #{vrStCd}
+        </if>
+        <if test="verifierScope and vrfcnInstId != null">
+            AND vrfcn_inst_id = #{vrfcnInstId}
+        </if>
+    </select>
+
+    <select id="selectVrs" resultType="kr.go.molit.icas.vr.domain.VrVO">
+        SELECT *
+        FROM vr.tn_vr
+        WHERE use_end_dt > NOW()
+        <if test="oprtrId != null and oprtrId != ''">
+            AND oprtr_id = #{oprtrId}
+        </if>
+        <if test="rprtYr != null and rprtYr != ''">
+            AND rprt_yr = #{rprtYr}
+        </if>
+        <if test="vrTypeCd != null and vrTypeCd != ''">
+            AND vr_type_cd = #{vrTypeCd}
+        </if>
+        <if test="vrStCd != null and vrStCd != ''">
+            AND vr_st_cd = #{vrStCd}
+        </if>
+        <if test="verifierScope and vrfcnInstId != null">
+            AND vrfcn_inst_id = #{vrfcnInstId}
+        </if>
+        ORDER BY rprt_yr DESC, oprtr_id, vr_type_cd, vr_ver DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countByPrefix" resultType="int">
+        <!-- SOFT DELETE 행도 포함 (PK 충돌 회피) + 정수 가드 -->
+        SELECT COALESCE(MAX(CAST(SUBSTRING(vr_id, LENGTH(#{prefix}) + 1) AS INTEGER)), 0)
+          FROM vr.tn_vr
+         WHERE vr_id LIKE #{prefix} || '%'
+           AND SUBSTRING(vr_id, LENGTH(#{prefix}) + 1) ~ '^[0-9]+$'
+    </select>
+
+    <insert id="insertVr">
+        INSERT INTO vr.tn_vr (
+            vr_id, oprtr_id, rprt_yr, vr_ver, vr_type_cd, vr_st_cd,
+            vrfcn_inst_id, er_id, eucr_id,
+            use_bgng_dt, use_end_dt,
+            frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+        ) VALUES (
+            #{vrId}, #{oprtrId}, #{rprtYr}, #{vrVer}, #{vrTypeCd}, #{vrStCd},
+            #{vrfcnInstId}, #{erId}, #{eucrId},
+            NOW(), '9999-12-31 23:59:59',
+            NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId}
+        )
+    </insert>
+
+    <update id="updateVr">
+        UPDATE vr.tn_vr
+        SET er_id           = #{erId},
+            eucr_id         = #{eucrId},
+            last_chg_dt     = NOW(),
+            last_chg_user_id = #{lastChgUserId}
+        WHERE vr_id     = #{vrId}
+          AND vr_st_cd  = 'DRAFT'
+          AND use_end_dt > NOW()
+    </update>
+
+    <update id="updateSubmit">
+        UPDATE vr.tn_vr
+        SET vr_st_cd     = 'SBMTD',
+            sbmt_dt      = CURRENT_DATE,
+            last_chg_dt  = NOW(),
+            last_chg_user_id = #{userId}
+        WHERE vr_id     = #{vrId}
+          AND vr_st_cd  = 'DRAFT'
+          AND use_end_dt > NOW()
+    </update>
+
+    <update id="updateRecommend">
+        UPDATE vr.tn_vr
+        SET vr_st_cd     = 'RCMDD',
+            rcmmd_dt     = CURRENT_DATE,
+            last_chg_dt  = NOW(),
+            last_chg_user_id = #{userId}
+        WHERE vr_id     = #{vrId}
+          AND vr_st_cd  = 'SBMTD'
+          AND use_end_dt > NOW()
+    </update>
+
+    <update id="updateApprove">
+        UPDATE vr.tn_vr
+        SET vr_st_cd     = 'APRVD',
+            aprv_dt      = CURRENT_DATE,
+            last_chg_dt  = NOW(),
+            last_chg_user_id = #{userId}
+        WHERE vr_id     = #{vrId}
+          AND vr_st_cd  = 'RCMDD'
+          AND use_end_dt > NOW()
+    </update>
+
+    <update id="updateReject">
+        UPDATE vr.tn_vr
+        SET vr_st_cd     = 'DRAFT',
+            rjct_rsn     = #{rjctRsn},
+            last_chg_dt  = NOW(),
+            last_chg_user_id = #{userId}
+        WHERE vr_id     = #{vrId}
+          AND vr_st_cd  = 'SBMTD'
+          AND use_end_dt > NOW()
+    </update>
+
+    <insert id="insertNewVersion">
+        INSERT INTO vr.tn_vr (
+            vr_id, oprtr_id, rprt_yr, vr_ver, vr_type_cd, vr_st_cd,
+            vrfcn_inst_id, er_id, eucr_id,
+            use_bgng_dt, use_end_dt,
+            frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+        ) VALUES (
+            #{vrId}, #{oprtrId}, #{rprtYr}, #{vrVer}, #{vrTypeCd}, 'DRAFT',
+            #{vrfcnInstId}, #{erId}, #{eucrId},
+            NOW(), '9999-12-31 23:59:59',
+            NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId}
+        )
+    </insert>
+
+    <update id="softDeleteVr">
+        UPDATE vr.tn_vr
+        SET use_end_dt       = NOW() - INTERVAL '1 minute',
+            last_chg_dt      = NOW(),
+            last_chg_user_id = #{userId}
+        WHERE vr_id     = #{vrId}
+          AND vr_st_cd  = 'DRAFT'
+          AND use_end_dt > NOW()
+    </update>
+
+</mapper>

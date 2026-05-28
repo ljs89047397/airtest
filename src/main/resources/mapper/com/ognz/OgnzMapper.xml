@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.com.ognz.OgnzMapper">
+
+    <!-- 유효한 기관 전체 조회 -->
+    <select id="selectAll" resultType="kr.go.molit.icas.com.ognz.domain.OgnzVO">
+        SELECT ognz_id,
+               ognz_se_cd,
+               ognz_nm,
+               ognz_nm_en,
+               biz_no,
+               addr,
+               rprstv_nm,
+               rprstv_cnct,
+               rmrk,
+               use_bgng_dt,
+               use_end_dt,
+               frst_reg_dt,
+               frst_reg_user_id,
+               last_chg_dt,
+               last_chg_user_id
+          FROM com.tn_ognz
+         WHERE NOW() BETWEEN use_bgng_dt AND use_end_dt
+         ORDER BY ognz_se_cd, ognz_nm
+    </select>
+
+    <!-- 단건 조회 (유효구간 필터 포함) -->
+    <select id="selectByOgnzId" resultType="kr.go.molit.icas.com.ognz.domain.OgnzVO">
+        SELECT ognz_id,
+               ognz_se_cd,
+               ognz_nm,
+               ognz_nm_en,
+               biz_no,
+               addr,
+               rprstv_nm,
+               rprstv_cnct,
+               rmrk,
+               use_bgng_dt,
+               use_end_dt,
+               frst_reg_dt,
+               frst_reg_user_id,
+               last_chg_dt,
+               last_chg_user_id
+          FROM com.tn_ognz
+         WHERE ognz_id = #{ognzId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </select>
+
+    <!-- 기관 등록 -->
+    <insert id="insertOgnz" parameterType="kr.go.molit.icas.com.ognz.domain.OgnzVO">
+        INSERT INTO com.tn_ognz
+            (ognz_id, ognz_se_cd, ognz_nm, ognz_nm_en,
+             biz_no, addr, rprstv_nm, rprstv_cnct, rmrk,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{ognzId}, #{ognzSeCd}, #{ognzNm}, #{ognzNmEn},
+             #{bizNo}, #{addr}, #{rprstvNm}, #{rprstvCnct}, #{rmrk},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId})
+    </insert>
+
+    <!-- 기관 수정 (유효구간 필터 포함) -->
+    <update id="updateOgnz" parameterType="kr.go.molit.icas.com.ognz.domain.OgnzVO">
+        UPDATE com.tn_ognz
+           SET ognz_se_cd        = #{ognzSeCd},
+               ognz_nm           = #{ognzNm},
+               ognz_nm_en        = #{ognzNmEn},
+               biz_no            = #{bizNo},
+               addr              = #{addr},
+               rprstv_nm         = #{rprstvNm},
+               rprstv_cnct       = #{rprstvCnct},
+               rmrk              = #{rmrk},
+               last_chg_dt       = NOW(),
+               last_chg_user_id  = #{lastChgUserId}
+         WHERE ognz_id = #{ognzId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+    <!-- 소프트 삭제: use_end_dt = NOW() - 1 minute -->
+    <update id="softDeleteOgnz">
+        UPDATE com.tn_ognz
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{userId}
+         WHERE ognz_id = #{ognzId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

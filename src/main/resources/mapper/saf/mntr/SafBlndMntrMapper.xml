@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.saf.mntr.SafBlndMntrMapper">
+
+    <select id="selectByPk" resultType="kr.go.molit.icas.saf.mntr.domain.SafBlndMntrVO">
+        SELECT * FROM saf.tn_saf_blnd_mntr
+        WHERE oprtr_id = #{oprtrId} AND rprt_yr = #{rprtYr}
+    </select>
+
+    <select id="selectByRprtYr" resultType="kr.go.molit.icas.saf.mntr.domain.SafBlndMntrVO">
+        SELECT * FROM saf.tn_saf_blnd_mntr WHERE rprt_yr = #{rprtYr} ORDER BY oprtr_id
+    </select>
+
+    <insert id="insertMntr">
+        INSERT INTO saf.tn_saf_blnd_mntr (
+            oprtr_id, rprt_yr, total_fuel_qty, saf_cert_purch_qty,
+            blnd_ratio, oblg_ratio, fulfilled_yn, last_calc_dt,
+            frst_reg_dt, frst_reg_user_id, last_chg_dt, last_chg_user_id
+        ) VALUES (
+            #{oprtrId}, #{rprtYr}, #{totalFuelQty}, #{safCertPurchQty},
+            #{blndRatio}, #{oblgRatio}, #{fulfilledYn}, NOW(),
+            NOW(), #{frstRegUserId}, NOW(), #{lastChgUserId}
+        )
+    </insert>
+
+    <update id="updateMntr">
+        UPDATE saf.tn_saf_blnd_mntr
+        SET total_fuel_qty     = #{totalFuelQty},
+            saf_cert_purch_qty = #{safCertPurchQty},
+            blnd_ratio         = #{blndRatio},
+            oblg_ratio         = #{oblgRatio},
+            fulfilled_yn       = #{fulfilledYn},
+            last_calc_dt       = NOW(),
+            last_chg_dt        = NOW(),
+            last_chg_user_id   = #{lastChgUserId}
+        WHERE oprtr_id = #{oprtrId} AND rprt_yr = #{rprtYr}
+    </update>
+
+</mapper>

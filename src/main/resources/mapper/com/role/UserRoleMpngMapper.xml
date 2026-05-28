@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.com.role.UserRoleMpngMapper">
+
+    <!-- 현재 유효한 매핑 존재 여부 (grantRole 충돌 체크) -->
+    <select id="existsActive" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1
+              FROM com.tn_user_role_mpng
+             WHERE user_id = #{userId}
+               AND role_id = #{roleId}
+               AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+        )
+    </select>
+
+    <!-- 현재 유효 역할 목록 (role 정보 JOIN) -->
+    <select id="selectActiveRolesByUser"
+            resultType="kr.go.molit.icas.com.role.domain.UserRoleMpngVO">
+        SELECT urm.user_id,
+               urm.role_id,
+               urm.use_bgng_dt,
+               urm.use_end_dt,
+               urm.frst_reg_dt,
+               urm.frst_reg_user_id,
+               urm.last_chg_dt,
+               urm.last_chg_user_id,
+               r.role_nm,
+               r.ognz_se_cd_allowed
+          FROM com.tn_user_role_mpng urm
+          JOIN com.tn_role r
+            ON r.role_id = urm.role_id
+           AND NOW() BETWEEN r.use_bgng_dt AND r.use_end_dt
+         WHERE urm.user_id = #{userId}
+           AND NOW() BETWEEN urm.use_bgng_dt AND urm.use_end_dt
+         ORDER BY urm.use_bgng_dt DESC
+    </select>
+
+    <!-- 전체 이력 조회 (과거 만료 행 포함 — 유효구간 필터 없음) -->
+    <select id="selectRoleHistory"
+            resultType="kr.go.molit.icas.com.role.domain.UserRoleMpngVO">
+        SELECT urm.user_id,
+               urm.role_id,
+               urm.use_bgng_dt,
+               urm.use_end_dt,
+               urm.frst_reg_dt,
+               urm.frst_reg_user_id,
+               urm.last_chg_dt,
+               urm.last_chg_user_id,
+               r.role_nm,
+               r.ognz_se_cd_allowed
+          FROM com.tn_user_role_mpng urm
+          LEFT JOIN com.tn_role r
+                 ON r.role_id = urm.role_id
+         WHERE urm.user_id = #{userId}
+         ORDER BY urm.use_bgng_dt DESC
+    </select>
+
+    <!-- 역할 부여 INSERT (시계열: use_bgng_dt = NOW()) -->
+    <insert id="grantRole" parameterType="kr.go.molit.icas.com.role.domain.UserRoleMpngVO">
+        INSERT INTO com.tn_user_role_mpng
+            (user_id, role_id,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{userId}, #{roleId},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <!--
+        역할 회수: 현재 유효한 행만 soft delete.
+        use_end_dt = NOW() - INTERVAL '1 minute'
+        과거 만료 행(AND NOW() BETWEEN ... 조건으로 필터)은 건드리지 않음.
+    -->
+    <update id="revokeRole">
+        UPDATE com.tn_user_role_mpng
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE user_id = #{userId}
+           AND role_id = #{roleId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

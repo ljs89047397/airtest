@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.go.molit.icas.com.authrt.AuthrtRoleMpngMapper">
+
+    <!-- (authrt_id, role_id) 유효 매핑 존재 여부 -->
+    <select id="existsActive" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1
+              FROM com.tn_sys_authrt_role_mpng
+             WHERE authrt_id = #{authrtId}
+               AND role_id   = #{roleId}
+               AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+        )
+    </select>
+
+    <!-- 역할에 부여된 권한 목록 (authrt 정보 JOIN) -->
+    <select id="selectByRole"
+            resultType="kr.go.molit.icas.com.authrt.domain.AuthrtRoleMpngVO">
+        SELECT arm.authrt_id,
+               arm.role_id,
+               arm.use_bgng_dt,
+               arm.use_end_dt,
+               arm.frst_reg_dt,
+               arm.frst_reg_user_id,
+               arm.last_chg_dt,
+               arm.last_chg_user_id,
+               a.authrt_nm,
+               a.authrt_desc
+          FROM com.tn_sys_authrt_role_mpng arm
+          JOIN com.tn_sys_authrt a
+            ON a.authrt_id = arm.authrt_id
+           AND NOW() BETWEEN a.use_bgng_dt AND a.use_end_dt
+         WHERE arm.role_id = #{roleId}
+           AND NOW() BETWEEN arm.use_bgng_dt AND arm.use_end_dt
+         ORDER BY arm.authrt_id
+    </select>
+
+    <!-- 권한을 보유한 역할 목록 (role 정보 JOIN) -->
+    <select id="selectByAuthrt"
+            resultType="kr.go.molit.icas.com.authrt.domain.AuthrtRoleMpngVO">
+        SELECT arm.authrt_id,
+               arm.role_id,
+               arm.use_bgng_dt,
+               arm.use_end_dt,
+               arm.frst_reg_dt,
+               arm.frst_reg_user_id,
+               arm.last_chg_dt,
+               arm.last_chg_user_id,
+               r.role_nm
+          FROM com.tn_sys_authrt_role_mpng arm
+          JOIN com.tn_role r
+            ON r.role_id = arm.role_id
+           AND NOW() BETWEEN r.use_bgng_dt AND r.use_end_dt
+         WHERE arm.authrt_id = #{authrtId}
+           AND NOW() BETWEEN arm.use_bgng_dt AND arm.use_end_dt
+         ORDER BY arm.role_id
+    </select>
+
+    <!-- 권한-역할 매핑 추가 -->
+    <insert id="addMapping" parameterType="kr.go.molit.icas.com.authrt.domain.AuthrtRoleMpngVO">
+        INSERT INTO com.tn_sys_authrt_role_mpng
+            (authrt_id, role_id,
+             use_bgng_dt, use_end_dt,
+             frst_reg_dt, frst_reg_user_id,
+             last_chg_dt, last_chg_user_id)
+        VALUES
+            (#{authrtId}, #{roleId},
+             NOW(), '9999-12-31 23:59:59',
+             NOW(), #{frstRegUserId},
+             NOW(), #{lastChgUserId})
+    </insert>
+
+    <!--
+        권한-역할 매핑 소프트 삭제.
+        현재 유효한 행만 대상 (NOW() BETWEEN ... 조건).
+    -->
+    <update id="removeMapping">
+        UPDATE com.tn_sys_authrt_role_mpng
+           SET use_end_dt       = NOW() - INTERVAL '1 minute',
+               last_chg_dt      = NOW(),
+               last_chg_user_id = #{lastChgUserId}
+         WHERE authrt_id = #{authrtId}
+           AND role_id   = #{roleId}
+           AND NOW() BETWEEN use_bgng_dt AND use_end_dt
+    </update>
+
+</mapper>

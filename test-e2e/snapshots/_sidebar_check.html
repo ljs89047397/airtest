@@ -1,0 +1,461 @@
+
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>대시보드 &mdash; ICAS-CEMS</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+:root { --icas-primary: #0F2C72; }
+body { background: #f0f2f5; }
+.summary-card { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.summary-card .icon-wrap { width:52px; height:52px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; }
+.table-status th { background: #0F2C72; color: white; font-weight:500; font-size:0.82rem; }
+.status-badge { font-size:0.72rem; padding:3px 8px; border-radius:4px; font-weight:600; }
+</style>
+</head>
+<body>
+
+
+
+<meta name="_csrf_parameter" content="_csrf" /><meta name="_csrf_header" content="X-XSRF-TOKEN" /><meta name="_csrf" content="2943d97a-e989-4bd3-8d55-4bc7a93e8cd6" />
+
+<nav class="navbar navbar-expand-lg fixed-top" style="background:#0F2C72; height:60px;">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand text-white fw-bold" href="/main">
+      &#9992; 국제항공 탄소배출량 관리시스템
+    </a>
+    <div class="d-flex align-items-center gap-3 ms-auto">
+      <span class="text-white-50 small">보고연도</span>
+      <select id="globalYr" class="form-select form-select-sm" style="width:90px;background:#1a3a8c;color:white;border-color:#2d4fa0;">
+        <option value="2026">2026</option>
+        <option value="2025">2025</option>
+        <option value="2024">2024</option>
+      </select>
+      <div class="text-white-50 small">|</div>
+      <a href="/manual" target="_blank" class="btn btn-sm btn-outline-light" title="시스템 매뉴얼 (새 창)">
+        <i class="bi bi-book me-1"></i>매뉴얼
+      </a>
+      <span class="text-white small"><i class="bi bi-person-circle me-1"></i>관리자</span>
+      <a href="/logout" class="btn btn-sm btn-outline-light">로그아웃</a>
+    </div>
+  </div>
+</nav>
+<script src="/resources/js/common/icas-esc.js"></script>
+<script src="/resources/js/common/icas-alert.js"></script>
+
+<script>
+(function() {
+    function loadCsrfScript() {
+        if (typeof jQuery === 'undefined') {
+            /* jQuery 아직 로드 안 됨 — 10ms 뒤 재시도 */
+            setTimeout(loadCsrfScript, 10);
+            return;
+        }
+        var s = document.createElement('script');
+        s.src = '/resources/js/common/icas-csrf.js';
+        s.defer = false;
+        document.head.appendChild(s);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadCsrfScript);
+    } else {
+        loadCsrfScript();
+    }
+}());
+</script>
+
+
+
+<div id="sidebar" style="width:220px;height:calc(100vh - 60px);max-height:calc(100vh - 60px);background:#1e293b;position:fixed;top:60px;left:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;">
+  <div class="p-3">
+
+    <!-- 메인 -->
+    <div class="text-white-50 small px-2 py-1 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">메인</div>
+    <a href="/main" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link active">
+      &#128202; 대시보드
+    </a>
+
+    <!-- 모니터링 계획 -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">모니터링 계획</div>
+    <a href="/emp/plan" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128221; 배출량 모니터링(EMP)
+    </a>
+
+    <!-- 배출량관리 -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">배출량관리</div>
+    <a href="/er/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128203; 배출량보고서(ER)
+    </a>
+    <a href="/vr/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#9989; 검증보고서(VR)
+    </a>
+    <a href="/er/cef/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#9981; 적격연료(CEF)
+    </a>
+    <a href="/er/eucr/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128179; 배출권취소(EUCR)
+    </a>
+    <a href="/er/oom/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128270; 적정성검토(OoM)
+    </a>
+    <a href="/er/oom/qchk/list" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128203; CORSIA 세부항목 검증
+    </a>
+
+    <!-- SAF -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">SAF</div>
+    <a href="/saf/dashboard" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#127807; SAF 이행현황
+    </a>
+    <a href="/saf/cert" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128209; SAF 인증서
+    </a>
+    <a href="/saf/batch" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128230; SAF 배치
+    </a>
+    <a href="/saf/airprt" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#9992; 공항별 급유&middot;구매
+    </a>
+    <a href="/saf/mntr" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128200; 혼합비율 모니터링
+    </a>
+
+    <!-- 포털 -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">포털</div>
+    <a href="/ptl/workflow" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128260; 통합 워크플로우
+    </a>
+    <a href="/ptl/stat" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128200; 통계/시뮬레이션
+    </a>
+    <a href="/ptl/ccr" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128229; CCR 추출
+    </a>
+    <a href="/ptl/sim" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#129518; 상쇄비용 시뮬
+    </a>
+    <a href="/ptl/actn" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#128221; 감사로그
+    </a>
+
+    <!-- 공통 AI 서비스 (RFP 박스 ⑩ — 2차년도 자리) -->
+    <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">AI 서비스</div>
+    <a href="/ai/console" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+      &#129302; AI 콘솔 (2차년도)
+    </a>
+
+    <!-- 관리 (MOLIT/KOTSA 전용) -->
+    
+      <div class="text-white-50 small px-2 py-1 mt-3 mb-1" style="font-size:0.7rem;letter-spacing:0.1em;">관리</div>
+      <a href="/com/user" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128100; 사용자 관리
+      </a>
+      <a href="/com/ognz" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#127970; 조직 관리
+      </a>
+      <a href="/com/oprtr" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#9992; 항공기 등록부
+      </a>
+      <a href="/com/vrfcn" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#9989; 검증기관
+      </a>
+      <a href="/com/authrt" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128272; 권한 관리
+      </a>
+      <a href="/com/role" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#127918; 역할 관리
+      </a>
+      <a href="/com/menu" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128196; 메뉴 관리
+      </a>
+      <a href="/com/prgrm" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128187; 프로그램 관리
+      </a>
+      <a href="/com/cd" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#9776; 공통코드
+      </a>
+      <a href="/com/atrz" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128221; 결재함
+      </a>
+      <a href="/com/rglt" class="d-block px-3 py-2 rounded text-decoration-none text-white-50 sidebar-link ">
+        &#128218; 규정 게시판
+      </a>
+    
+
+  </div>
+</div>
+<style>
+.sidebar-link:hover, .sidebar-link.active { background:#0F2C72 !important; color:white !important; }
+/* 사이드바 스크롤바 스타일 (overflow-y:auto 보강) */
+#sidebar::-webkit-scrollbar { width:6px; }
+#sidebar::-webkit-scrollbar-track { background:#1e293b; }
+#sidebar::-webkit-scrollbar-thumb { background:#475569; border-radius:3px; }
+#sidebar::-webkit-scrollbar-thumb:hover { background:#64748b; }
+/* 마지막 항목 하단 여백 */
+#sidebar > .p-3 { padding-bottom:2rem !important; }
+</style>
+<script>
+/* ─────────────────────────────────────────────────────────
+   사이드바 스크롤 위치 보존 (sessionStorage)
+   메뉴 클릭으로 페이지 이동해도 사용자가 보던 위치 유지
+   ───────────────────────────────────────────────────────── */
+(function () {
+  var SIDEBAR_SCROLL_KEY = 'icasSidebarScrollTop';
+  function restoreScroll() {
+    var sb = document.getElementById('sidebar');
+    if (!sb) return;
+    var saved = sessionStorage.getItem(SIDEBAR_SCROLL_KEY);
+    if (saved != null) sb.scrollTop = parseInt(saved, 10) || 0;
+    // 메뉴 클릭 시 현재 스크롤 위치 저장
+    sb.querySelectorAll('a.sidebar-link').forEach(function (a) {
+      a.addEventListener('click', function () {
+        sessionStorage.setItem(SIDEBAR_SCROLL_KEY, sb.scrollTop);
+      });
+    });
+    // 스크롤 위치도 throttle 로 저장 (사용자가 스크롤만 하고 클릭 안 해도 보존)
+    var t = null;
+    sb.addEventListener('scroll', function () {
+      if (t) clearTimeout(t);
+      t = setTimeout(function () {
+        sessionStorage.setItem(SIDEBAR_SCROLL_KEY, sb.scrollTop);
+      }, 100);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', restoreScroll);
+  else restoreScroll();
+})();
+</script>
+
+
+<div style="margin-left:220px; padding-top:60px;">
+  <div class="container-fluid p-4">
+
+    <!-- 페이지 타이틀 -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+      <div>
+        <h5 class="fw-bold mb-0" style="color:#0F2C72;">대시보드</h5>
+        <small class="text-muted">보고연도 2026 기준 현황</small>
+      </div>
+      <span class="badge" style="background:#0F2C72;">2026년 기준</span>
+    </div>
+
+    <!-- 요약 카드 4개 -->
+    <div class="row g-3 mb-4">
+      <div class="col-xl-3 col-md-6">
+        <div class="card summary-card h-100">
+          <div class="card-body d-flex align-items-center gap-3">
+            <div class="icon-wrap" style="background:#e8eeff;">&#9992;</div>
+            <div>
+              <div class="text-muted small">총 운영사 수</div>
+              <div class="fs-3 fw-bold" style="color:#0F2C72;" id="summaryTotalOprtr">12</div>
+              <div class="text-muted" style="font-size:0.75rem;">ICAO 등록 항공사</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-3 col-md-6">
+        <div class="card summary-card h-100">
+          <div class="card-body d-flex align-items-center gap-3">
+            <div class="icon-wrap" style="background:#e8f5e9;">&#128203;</div>
+            <div>
+              <div class="text-muted small">보고서 제출율</div>
+              <div class="fs-3 fw-bold text-success" id="summaryErRate">75%</div>
+              <div class="text-muted" style="font-size:0.75rem;">9/12 운영사 제출 완료</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-3 col-md-6">
+        <div class="card summary-card h-100">
+          <div class="card-body d-flex align-items-center gap-3">
+            <div class="icon-wrap" style="background:#e8f5e9;">&#127807;</div>
+            <div>
+              <div class="text-muted small">SAF 이행율</div>
+              <div class="fs-3 fw-bold text-success" id="summarySafRate">58%</div>
+              <div class="text-muted" style="font-size:0.75rem;">7/12 운영사 기준 충족</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-3 col-md-6">
+        <div class="card summary-card h-100">
+          <div class="card-body d-flex align-items-center gap-3">
+            <div class="icon-wrap" style="background:#fff3e0;">&#9729;</div>
+            <div>
+              <div class="text-muted small">2026 총 CO&#8322; (tCO&#8322;)</div>
+              <div class="fs-3 fw-bold text-warning" id="summaryCo2">4,821,305</div>
+              <div class="text-muted" style="font-size:0.75rem;">전년 대비 +3.2%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <!-- 워크플로우 현황 테이블 -->
+      <div class="col-xl-8">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header bg-white border-bottom py-3">
+            <h6 class="fw-bold mb-0" style="color:#0F2C72;">&#128260; 워크플로우 현황 (2026)</h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover table-sm mb-0 table-status">
+                <thead>
+                  <tr>
+                    <th class="ps-3">운영사</th>
+                    <th>ICAO</th>
+                    <th>ER</th>
+                    <th>CEF</th>
+                    <th>EUCR</th>
+                    <th>VR</th>
+                    <th>SAF</th>
+                  </tr>
+                </thead>
+                <tbody id="workflowTableBody">
+                  <tr>
+                    <td colspan="7" class="text-center py-3 text-muted small">데이터 로딩 중...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 빠른 링크 -->
+      <div class="col-xl-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header bg-white border-bottom py-3">
+            <h6 class="fw-bold mb-0" style="color:#0F2C72;">&#9889; 빠른 메뉴</h6>
+          </div>
+          <div class="card-body">
+            <div class="d-grid gap-2">
+              <a href="/er/list" class="btn btn-outline-primary btn-sm text-start">
+                <i class="bi bi-file-earmark-text me-2"></i>배출량보고서(ER) 목록
+              </a>
+              <a href="/vr/list" class="btn btn-outline-success btn-sm text-start">
+                <i class="bi bi-check2-square me-2"></i>검증보고서(VR) 목록
+              </a>
+              <a href="/er/cef/list" class="btn btn-outline-warning btn-sm text-start">
+                <i class="bi bi-fuel-pump me-2"></i>적격연료(CEF) 목록
+              </a>
+              <a href="/er/eucr/list" class="btn btn-outline-danger btn-sm text-start">
+                <i class="bi bi-credit-card me-2"></i>배출권취소(EUCR) 목록
+              </a>
+              <a href="/saf/dashboard" class="btn btn-outline-success btn-sm text-start">
+                <i class="bi bi-leaf me-2"></i>SAF 이행현황
+              </a>
+              <a href="/ptl/workflow" class="btn btn-sm text-start text-white" style="background:#0F2C72;">
+                <i class="bi bi-diagram-3 me-2"></i>통합 워크플로우
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CO2 배출량 연도별 추이 차트 -->
+    <div class="row g-3">
+      <div class="col-12">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white border-bottom py-3">
+            <h6 class="fw-bold mb-0" style="color:#0F2C72;">&#128200; CO&#8322; 배출량 연도별 추이 (tCO&#8322;)</h6>
+          </div>
+          <div class="card-body">
+            <div id="co2TrendChart" style="height:300px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /container-fluid -->
+</div><!-- /main content -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+// 상태 배지 렌더링
+function renderStatusBadge(status) {
+  if (!status) return '<span class="badge status-badge bg-light text-muted border">미작성</span>';
+  const map = {
+    'DRAFT':  ['bg-secondary', '작성중'],
+    'SBMTD':  ['bg-primary',   '제출'],
+    'RVWNG':  ['bg-warning text-dark', '검토중'],
+    'RJCTD':  ['bg-danger',    '반려'],
+    'APRVD':  ['bg-success',   '승인']
+  };
+  const [cls, label] = map[status] || ['bg-secondary', status];
+  return '<span class="badge status-badge ' + cls + '">' + label + '</span>';
+}
+
+// 샘플 데이터
+const sampleWorkflow = [
+  {oprtrNm:'대한항공', icaoCd:'KAL', erSttsCd:'APRVD', cefSttsCd:'APRVD', eucrSttsCd:'SBMTD', vrSttsCd:'RVWNG', safSttsCd:'APRVD'},
+  {oprtrNm:'아시아나항공', icaoCd:'AAR', erSttsCd:'SBMTD', cefSttsCd:'SBMTD', eucrSttsCd:'SBMTD', vrSttsCd:'SBMTD', safSttsCd:'RVWNG'},
+  {oprtrNm:'제주항공', icaoCd:'JJA', erSttsCd:'RVWNG', cefSttsCd:'APRVD', eucrSttsCd:'DRAFT', vrSttsCd:null, safSttsCd:'SBMTD'},
+  {oprtrNm:'진에어', icaoCd:'JNA', erSttsCd:'DRAFT', cefSttsCd:'DRAFT', eucrSttsCd:null, vrSttsCd:null, safSttsCd:'DRAFT'},
+  {oprtrNm:'티웨이항공', icaoCd:'TWB', erSttsCd:'SBMTD', cefSttsCd:'SBMTD', eucrSttsCd:'SBMTD', vrSttsCd:'RVWNG', safSttsCd:'SBMTD'},
+  {oprtrNm:'에어부산', icaoCd:'ABL', erSttsCd:'RJCTD', cefSttsCd:'APRVD', eucrSttsCd:'SBMTD', vrSttsCd:null, safSttsCd:'DRAFT'},
+];
+
+function renderWorkflowTable(data) {
+  const tbody = $('#workflowTableBody');
+  if (!data || data.length === 0) {
+    tbody.html('<tr><td colspan="7" class="text-center py-3 text-muted small">데이터가 없습니다.</td></tr>');
+    return;
+  }
+  let html = '';
+  data.forEach(function(row) {
+    html += '<tr>'
+      + '<td class="ps-3 fw-semibold small">' + (row.oprtrNm || row.oprtrId) + '</td>'
+      + '<td class="small text-muted">' + (row.icaoDesig || row.icaoCd || '-') + '</td>'
+      + '<td>' + renderStatusBadge(row.erStCd || row.erSttsCd) + '</td>'
+      + '<td>' + renderStatusBadge(row.cefStCd || row.cefSttsCd) + '</td>'
+      + '<td>' + renderStatusBadge(row.eucrStCd || row.eucrSttsCd) + '</td>'
+      + '<td>' + renderStatusBadge(row.vrStCd || row.vrSttsCd) + '</td>'
+      + '<td>' + renderStatusBadge(row.oomStCd || row.safSttsCd) + '</td>'
+      + '</tr>';
+  });
+  tbody.html(html);
+}
+
+// CO2 추이 차트
+function initCo2Chart(data) {
+  const chart = echarts.init(document.getElementById('co2TrendChart'));
+  const years  = data ? data.years  : ['2022','2023','2024','2025','2026'];
+  const values = data ? data.values : [4120000, 4350000, 4580000, 4672000, 4821305];
+  chart.setOption({
+    tooltip: { trigger:'axis', formatter: function(p) { return p[0].name + '년<br/>CO&#8322;: ' + p[0].value.toLocaleString() + ' tCO&#8322;'; } },
+    grid: { left:'5%', right:'3%', bottom:'3%', containLabel:true },
+    xAxis: { type:'category', data:years, axisLabel:{ formatter:'{value}년' } },
+    yAxis: { type:'value', axisLabel:{ formatter: function(v){ return (v/10000).toFixed(0) + '만'; } } },
+    series: [{
+      type:'line', data:values, smooth:true, symbol:'circle', symbolSize:8,
+      itemStyle:{ color:'#0F2C72' },
+      lineStyle:{ color:'#0F2C72', width:3 },
+      areaStyle:{ color:'rgba(15,44,114,0.1)' }
+    }]
+  });
+  window.addEventListener('resize', function(){ chart.resize(); });
+}
+
+$(function(){
+  // 워크플로우 데이터 로드
+  $.get('/api/ptl/workflow?rprtYr=2026')
+    .done(function(res){ renderWorkflowTable(res.data || res); })
+    .fail(function(){ renderWorkflowTable(sampleWorkflow); });
+
+  // CO2 통계 차트 로드
+  $.get('/api/ptl/stat/2026')
+    .done(function(res){ initCo2Chart(res); })
+    .fail(function(){ initCo2Chart(null); });
+});
+</script>
+</body>
+</html>

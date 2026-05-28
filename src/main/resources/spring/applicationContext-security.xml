@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/security"
+             xmlns:beans="http://www.springframework.org/schema/beans"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="
+                 http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+                 http://www.springframework.org/schema/security https://www.springframework.org/schema/security/spring-security.xsd">
+
+    <http auto-config="false" use-expressions="true" entry-point-ref="loginEntryPoint">
+        <intercept-url pattern="/login"          access="permitAll"/>
+        <intercept-url pattern="/api/com/auth/**" access="permitAll"/>
+        <intercept-url pattern="/resources/**"   access="permitAll"/>
+        <intercept-url pattern="/health"         access="permitAll"/>
+        <intercept-url pattern="/main"           access="isAuthenticated()"/>
+        <intercept-url pattern="/er/**"          access="isAuthenticated()"/>
+        <intercept-url pattern="/vr/**"          access="isAuthenticated()"/>
+        <intercept-url pattern="/saf/**"         access="isAuthenticated()"/>
+        <intercept-url pattern="/ptl/**"         access="isAuthenticated()"/>
+        <intercept-url pattern="/**"             access="isAuthenticated()"/>
+
+        <form-login login-page="/login"
+                    login-processing-url="/api/com/auth/login"
+                    username-parameter="userId"
+                    password-parameter="password"
+                    authentication-success-handler-ref="loginSuccessHandler"
+                    authentication-failure-handler-ref="loginFailureHandler"/>
+
+        <logout logout-url="/api/com/auth/logout"
+                logout-success-url="/login?logout"
+                delete-cookies="JSESSIONID"
+                invalidate-session="true"/>
+
+        <session-management session-fixation-protection="newSession">
+            <concurrency-control max-sessions="1" error-if-maximum-exceeded="false"/>
+        </session-management>
+
+        <!--
+            CSRF 활성화: CookieCsrfTokenRepository(httpOnly=false)
+            - 브라우저가 XSRF-TOKEN 쿠키를 JS 로 읽을 수 있음
+            - 모든 POST/PUT/DELETE/PATCH 요청에 X-XSRF-TOKEN 헤더 또는
+              _csrf 파라미터가 있어야 통과
+            - /resources/**, /login, /error, /health 는 Spring Security
+              intercept-url 에서 permitAll 이지만 CSRF 필터 자체는 동작함.
+              단, GET 계열은 CSRF 검증 없으므로 정적 리소스 접근에 영향 없음.
+        -->
+        <csrf token-repository-ref="csrfTokenRepository"/>
+
+        <headers>
+            <frame-options policy="SAMEORIGIN"/>
+            <content-type-options/>
+            <xss-protection/>
+            <!-- 개발환경: HSTS 비활성화 (HTTP localhost) -->
+            <!-- <hsts max-age-seconds="31536000" include-subdomains="true"/> -->
+        </headers>
+
+        <access-denied-handler error-page="/WEB-INF/views/common/error/403.jsp"/>
+    </http>
+
+    <authentication-manager>
+        <authentication-provider ref="icasAuthenticationProvider"/>
+    </authentication-manager>
+
+    <beans:bean id="loginEntryPoint" class="org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint">
+        <beans:constructor-arg value="/login"/>
+    </beans:bean>
+
+    <beans:bean id="loginSuccessHandler" class="kr.go.molit.icas.common.security.IcasLoginSuccessHandler"/>
+    <beans:bean id="loginFailureHandler" class="kr.go.molit.icas.common.security.IcasLoginFailureHandler"/>
+    <beans:bean id="icasAuthenticationProvider" class="kr.go.molit.icas.common.security.IcasAuthenticationProvider"/>
+
+    <!--
+        CookieCsrfTokenRepository: XSRF-TOKEN 쿠키 발급 (JS 읽기 가능)
+        - withHttpOnlyFalse() 와 동일한 효과를 XML에서 구현
+        - cookieName: XSRF-TOKEN (기본값 유지)
+        - headerName: X-XSRF-TOKEN
+        - parameterName: _csrf (form submit 용)
+    -->
+    <beans:bean id="csrfTokenRepository"
+                class="org.springframework.security.web.csrf.CookieCsrfTokenRepository">
+        <beans:property name="cookieHttpOnly" value="false"/>
+        <beans:property name="cookieName"     value="XSRF-TOKEN"/>
+        <beans:property name="headerName"     value="X-XSRF-TOKEN"/>
+        <beans:property name="parameterName"  value="_csrf"/>
+    </beans:bean>
+</beans:beans>
