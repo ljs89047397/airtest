@@ -40,14 +40,14 @@ body { background: linear-gradient(135deg, #0F2C72 0%, #1a4a9a 100%); min-height
         <label class="form-label fw-semibold">아이디</label>
         <div class="input-group">
           <span class="input-group-text"><i class="bi bi-person"></i></span>
-          <input type="text" id="userId" name="userId" class="form-control" value="admin01" autocomplete="username">
+          <input type="text" id="userId" name="userId" class="form-control" value="admin" autocomplete="username">
         </div>
       </div>
       <div class="mb-4">
         <label class="form-label fw-semibold">비밀번호</label>
         <div class="input-group">
           <span class="input-group-text"><i class="bi bi-lock"></i></span>
-          <input type="password" id="password" name="password" class="form-control" value="admin1234!" autocomplete="current-password">
+          <input type="password" id="password" name="password" class="form-control" value="gnsoft12345!" autocomplete="current-password">
         </div>
       </div>
       <button type="submit" id="loginBtn" class="btn btn-icas w-100 fw-bold py-2">
