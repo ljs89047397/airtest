@@ -7,7 +7,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests -q
 
 # Stage 2: Deploy
-FROM tomcat:9.0-jdk17-openjdk-slim
+FROM tomcat:9.0-jdk17-temurin
 RUN rm -rf /usr/local/tomcat/webapps/*
 RUN mkdir -p /var/icas/files
 COPY --from=builder /app/target/icas.war /usr/local/tomcat/webapps/ROOT.war
